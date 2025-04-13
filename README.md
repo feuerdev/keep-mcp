@@ -1,5 +1,7 @@
 # keep-mcp
 
+[![smithery badge](https://smithery.ai/badge/@feuerdev/keep-mcp)](https://smithery.ai/server/@feuerdev/keep-mcp)
+
 MCP server for Google Keep
 
 ![keep-mcp](https://github.com/user-attachments/assets/f50c4ae6-4d35-4bb6-a494-51c67385f1b6)
