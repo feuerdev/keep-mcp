@@ -1,0 +1,38 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - googleEmail
+      - googleMasterToken
+    properties:
+      googleEmail:
+        type: string
+        description: Your Google account email address
+      googleMasterToken:
+        type: string
+        description: Your Google account master token
+      unsafeMode:
+        type: boolean
+        default: false
+        description: Set to true to enable unsafe modifications (bypass safe-mode
+          restrictions)
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'mcp',
+      args: [],
+      env: {
+        GOOGLE_EMAIL: config.googleEmail,
+        GOOGLE_MASTER_TOKEN: config.googleMasterToken,
+        UNSAFE_MODE: config.unsafeMode ? 'true' : 'false'
+      }
+    })
+  exampleConfig:
+    googleEmail: example@gmail.com
+    googleMasterToken: example_master_token
+    unsafeMode: false
