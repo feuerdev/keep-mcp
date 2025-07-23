@@ -2,6 +2,10 @@
 
 MCP server for Google Keep
 
+<a href="https://glama.ai/mcp/servers/@feuerdev/keep-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@feuerdev/keep-mcp/badge" alt="Keep MCP server" />
+</a>
+
 ![keep-mcp](https://github.com/user-attachments/assets/f50c4ae6-4d35-4bb6-a494-51c67385f1b6)
 
 ## How to use
