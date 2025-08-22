@@ -1,4 +1,5 @@
 # keep-mcp
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/feuerdev/keep-mcp)](https://archestra.ai/mcp-catalog/feuerdev__keep-mcp)
 
 MCP server for Google Keep
 
