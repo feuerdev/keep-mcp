@@ -9,7 +9,7 @@ from typing import Any
 import gkeepapi
 from mcp.server.fastmcp import FastMCP
 
-from .keep_api import can_modify_note, get_client, serialize_label, serialize_note
+from .keep_api import KEEP_MCP_LABEL, can_modify_note, get_client, is_unsafe_mode, serialize_label, serialize_note
 
 mcp = FastMCP("keep")
 
@@ -277,8 +277,14 @@ def create_label(name: str) -> str:
 def delete_label(label_id: str) -> str:
     """Delete a label by ID."""
     keep = get_client()
-    if not keep.getLabel(label_id):
+    label = keep.getLabel(label_id)
+    if not label:
         raise ValueError(f"Label with ID {label_id} not found")
+    if label.name == KEEP_MCP_LABEL and not is_unsafe_mode():
+        raise ValueError(
+            f"Cannot delete the '{KEEP_MCP_LABEL}' label in safe mode: all notes managed "
+            "by this server would become permanently unmodifiable. Set UNSAFE_MODE=true to override."
+        )
     keep.deleteLabel(label_id)
     keep.sync()
     return json.dumps({"message": f"Label {label_id} marked for deletion"})
@@ -308,6 +314,11 @@ def remove_label_from_note(note_id: str, label_id: str) -> str:
     label = keep.getLabel(label_id)
     if not label:
         raise ValueError(f"Label with ID {label_id} not found")
+    if label.name == KEEP_MCP_LABEL and not is_unsafe_mode():
+        raise ValueError(
+            f"Cannot remove the '{KEEP_MCP_LABEL}' label in safe mode: the note would "
+            "become permanently unmodifiable. Set UNSAFE_MODE=true to override."
+        )
 
     note.labels.remove(label)
     keep.sync()

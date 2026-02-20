@@ -3,6 +3,8 @@ import os
 import requests
 from dotenv import load_dotenv
 
+KEEP_MCP_LABEL = "keep-mcp"
+
 _keep_client = None
 
 def get_client():
@@ -102,27 +104,31 @@ def serialize_note(note):
 
     return payload
 
+def is_unsafe_mode() -> bool:
+    return os.getenv('UNSAFE_MODE', '').lower() == 'true'
+
+
 def can_modify_note(note):
     """
     Check if a note can be modified based on label and environment settings.
-    
+
     Args:
         note: A Google Keep note object
-        
+
     Returns:
         bool: True if the note can be modified, False otherwise
     """
-    unsafe_mode = os.getenv('UNSAFE_MODE', '').lower() == 'true'
-    return unsafe_mode or has_keep_mcp_label(note)
+    return is_unsafe_mode() or has_keep_mcp_label(note)
+
 
 def has_keep_mcp_label(note):
     """
     Check if a note has the keep-mcp label.
-    
+
     Args:
         note: A Google Keep note object
-        
+
     Returns:
         bool: True if the note has the keep-mcp label, False otherwise
     """
-    return any(label.name == 'keep-mcp' for label in note.labels.all()) 
+    return any(label.name == KEEP_MCP_LABEL for label in note.labels.all())
