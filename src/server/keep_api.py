@@ -1,5 +1,6 @@
 import gkeepapi
 import os
+import requests
 from dotenv import load_dotenv
 
 _keep_client = None
@@ -31,7 +32,21 @@ def get_client():
     keep = gkeepapi.Keep()
     
     # Authenticate
-    keep.authenticate(email, master_token)
+    try:
+        keep.authenticate(email, master_token)
+    except requests.exceptions.JSONDecodeError as exc:
+        raise RuntimeError(
+            "Google Keep API returned a non-JSON response during authentication. "
+            "This usually means the unofficial Keep API (notes/v1) is inaccessible "
+            "from this environment (HTTP 403/4xx). "
+            "Check that your GOOGLE_MASTER_TOKEN is valid and that the Keep API "
+            "is reachable from this network."
+        ) from exc
+    except gkeepapi.exception.LoginException as exc:
+        raise RuntimeError(
+            f"Google Keep login failed: {exc}. "
+            "Verify that GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN are correct."
+        ) from exc
     
     # Store the client for reuse
     _keep_client = keep
