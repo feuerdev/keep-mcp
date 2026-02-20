@@ -161,6 +161,9 @@ class DummyKeep:
     def getLabel(self, label_id):
         return self._labels.get(label_id)
 
+    def all(self):
+        return list(self.notes.values())
+
     def deleteLabel(self, label_id):
         self._labels.pop(label_id, None)
 
@@ -330,6 +333,26 @@ def test_label_crud_and_missing_label_errors(keep):
         cli.add_label_to_note("n1", "bad")
     with pytest.raises(ValueError, match="Label with ID bad not found"):
         cli.remove_label_from_note("n1", "bad")
+
+
+def test_delete_label_safe_mode_guards(keep, monkeypatch):
+    # Deleting the keep-mcp label is blocked in safe mode.
+    with pytest.raises(ValueError, match="keep-mcp"):
+        cli.delete_label("l1")
+
+    # Deleting a label that is on an unmanaged note is also blocked in safe mode.
+    unmanaged = DummyNote("unmanaged")  # no keep-mcp label
+    shared = DummyLabel("shared", "shared-tag")
+    keep._labels["shared"] = shared
+    unmanaged.labels.add(shared)
+    keep.notes["unmanaged"] = unmanaged
+    with pytest.raises(ValueError, match="unmanaged"):
+        cli.delete_label("shared")
+
+    # UNSAFE_MODE bypasses both guards.
+    monkeypatch.setenv("UNSAFE_MODE", "true")
+    msg = json.loads(cli.delete_label("shared"))
+    assert "marked for deletion" in msg["message"]
 
 
 def test_label_add_remove(keep):
