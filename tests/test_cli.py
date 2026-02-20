@@ -200,7 +200,17 @@ def test_find_forwards_filters(keep):
     )
     assert keep.last_find_kwargs["query"] == "q"
     assert keep.last_find_kwargs["labels"] == ["l1"]
+    assert [color.value for color in keep.last_find_kwargs["colors"]] == ["red"]
     assert isinstance(result, list)
+
+
+def test_find_invalid_color_raises(keep, monkeypatch):
+    def bad_color(_):
+        raise ValueError("bad")
+
+    monkeypatch.setattr(cli.gkeepapi.node, "ColorValue", bad_color)
+    with pytest.raises(ValueError, match="Invalid color 'invalid'"):
+        cli.find(colors=["invalid"])
 
 
 def test_get_note(keep):

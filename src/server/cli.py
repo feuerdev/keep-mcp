@@ -30,6 +30,20 @@ def _ensure_modifiable(note):
         )
 
 
+def _normalize_colors(colors: list[str] | None):
+    if colors is None:
+        return None
+
+    normalized_colors = []
+    for color in colors:
+        try:
+            normalized_colors.append(gkeepapi.node.ColorValue(color))
+        except ValueError as exc:
+            raise ValueError(f"Invalid color '{color}'") from exc
+
+    return normalized_colors
+
+
 @mcp.tool()
 def find(
     query: str = "",
@@ -41,10 +55,11 @@ def find(
 ) -> str:
     """Find notes using text and optional filters."""
     keep = get_client()
+    normalized_colors = _normalize_colors(colors)
     notes = keep.find(
         query=query,
         labels=labels,
-        colors=colors,
+        colors=normalized_colors,
         pinned=pinned,
         archived=archived,
         trashed=trashed,
