@@ -71,6 +71,20 @@ By default, all destructive and modification operations are restricted to notes 
 }
 ```
 
+## Testing
+
+The project includes a lightweight unit test suite under `tests/` that validates:
+* note serialization shape for note and list objects (including labels, collaborators, media, and list items)
+* modification safety behavior (`keep-mcp` label requirement and `UNSAFE_MODE=true` override)
+
+Run locally:
+
+```bash
+pytest -q
+```
+
+A GitHub Actions CI workflow now runs this same suite for each pull request across Python 3.10, 3.11, and 3.12.
+
 ## Publishing
 
 To publish a new version to PyPI:
