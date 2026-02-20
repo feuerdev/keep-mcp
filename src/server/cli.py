@@ -53,7 +53,7 @@ def find(
     archived: bool | None = False,
     trashed: bool = False,
 ) -> str:
-    """Find notes using text and optional filters."""
+    """Find notes using text and optional filters. labels should be label IDs. colors should be ColorValue strings (e.g. DEFAULT, RED, CERULEAN)."""
     keep = get_client()
     normalized_colors = _normalize_colors(colors)
     notes = keep.find(
@@ -188,7 +188,7 @@ def update_note(note_id: str, title: str | None = None, text: str | None = None)
 
 @mcp.tool()
 def set_note_color(note_id: str, color: str) -> str:
-    """Set a note color (e.g. white, red, orange, yellow, green, teal, blue, darkblue, purple, pink, brown, gray)."""
+    """Set a note color. Valid values: DEFAULT (white), RED, ORANGE, YELLOW, GREEN, TEAL, BLUE, CERULEAN (dark blue), PURPLE, PINK, BROWN, GRAY."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
 
@@ -277,6 +277,8 @@ def create_label(name: str) -> str:
 def delete_label(label_id: str) -> str:
     """Delete a label by ID."""
     keep = get_client()
+    if not keep.getLabel(label_id):
+        raise ValueError(f"Label with ID {label_id} not found")
     keep.deleteLabel(label_id)
     keep.sync()
     return json.dumps({"message": f"Label {label_id} marked for deletion"})

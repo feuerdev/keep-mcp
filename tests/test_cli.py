@@ -204,6 +204,11 @@ def test_find_forwards_filters(keep):
     assert isinstance(result, list)
 
 
+def test_find_without_colors_passes_none(keep):
+    cli.find(query="q")
+    assert keep.last_find_kwargs["colors"] is None
+
+
 def test_find_invalid_color_raises(keep, monkeypatch):
     def bad_color(_):
         raise ValueError("bad")
@@ -237,6 +242,12 @@ def test_create_list_variants(keep):
         cli.create_list("list", items=[{"text": "a", "checked": True}])
     )
     assert data_with_items["items"][0]["checked"] is True
+
+
+def test_create_list_creates_label_when_missing(keep):
+    keep._labels = {}
+    data = json.loads(cli.create_list("list"))
+    assert data["labels"][0]["name"] == "keep-mcp"
 
 
 def test_update_note_updates_fields(keep):
@@ -276,6 +287,10 @@ def test_delete_list_item_paths(keep):
 def test_list_item_requires_list_type(keep):
     with pytest.raises(ValueError, match="not a list"):
         cli.add_list_item("n1", "x")
+    with pytest.raises(ValueError, match="not a list"):
+        cli.update_list_item("n1", "i1", text="x")
+    with pytest.raises(ValueError, match="not a list"):
+        cli.delete_list_item("n1", "i1")
 
 
 def test_set_note_color_validates(keep, monkeypatch):
@@ -309,6 +324,8 @@ def test_label_crud_and_missing_label_errors(keep):
     message = json.loads(cli.delete_label(created["id"]))
     assert "marked for deletion" in message["message"]
 
+    with pytest.raises(ValueError, match="Label with ID bad not found"):
+        cli.delete_label("bad")
     with pytest.raises(ValueError, match="Label with ID bad not found"):
         cli.add_label_to_note("n1", "bad")
     with pytest.raises(ValueError, match="Label with ID bad not found"):

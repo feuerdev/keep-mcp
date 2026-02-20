@@ -45,6 +45,7 @@ Check https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token and ht
 * `delete_list_item`: Delete a checklist item
 
 ### Note state tools
+* `set_note_color`: Set a note color (valid values: DEFAULT, RED, ORANGE, YELLOW, GREEN, TEAL, BLUE, CERULEAN, PURPLE, PINK, BROWN, GRAY)
 * `pin_note`: Pin or unpin a note
 * `archive_note`: Archive or unarchive a note
 * `trash_note`: Move a note to trash
