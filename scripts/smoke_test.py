@@ -19,6 +19,10 @@ It is intended for manual verification, not CI.
 
 import json
 import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from server import cli
 
