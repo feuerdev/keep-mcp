@@ -38,6 +38,19 @@ def get_client():
     
     return keep
 
+def serialize_label(label):
+    return {'id': label.id, 'name': label.name}
+
+
+def serialize_list_item(item):
+    return {
+        'id': item.id,
+        'text': item.text,
+        'checked': item.checked,
+        'parent_item_id': item.parent_item.id if item.parent_item else None,
+    }
+
+
 def serialize_note(note):
     """
     Serialize a Google Keep note into a dictionary.
@@ -48,14 +61,31 @@ def serialize_note(note):
     Returns:
         dict: A dictionary containing the note's id, title, text, pinned status, color and labels
     """
-    return {
+    payload = {
         'id': note.id,
         'title': note.title,
         'text': note.text,
+        'type': note.type.value,
         'pinned': note.pinned,
+        'archived': note.archived,
+        'trashed': note.trashed,
         'color': note.color.value if note.color else None,
-        'labels': [{'id': label.id, 'name': label.name} for label in note.labels.all()]
+        'labels': [serialize_label(label) for label in note.labels.all()],
+        'collaborators': list(note.collaborators.all()),
     }
+
+    if hasattr(note, 'items'):
+        payload['items'] = [serialize_list_item(item) for item in note.items]
+
+    payload['media'] = [
+        {
+            'blob_id': blob.id,
+            'type': blob.blob.type.value if blob.blob and blob.blob.type else None,
+        }
+        for blob in note.blobs
+    ]
+
+    return payload
 
 def can_modify_note(note):
     """
