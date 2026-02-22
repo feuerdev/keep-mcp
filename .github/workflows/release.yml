@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compute semantic release version from commits
+        id: meta
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          import pathlib
+          import re
+          import subprocess
+
+
+          def run(*args: str) -> str:
+              return subprocess.check_output(args, text=True).strip()
+
+
+          def parse_tuple(version: str) -> tuple[int, int, int]:
+              match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", version)
+              if not match:
+                  raise SystemExit(f"Unsupported version format: {version}")
+              return tuple(int(part) for part in match.groups())
+
+
+          def parse_semver_tag(tag: str) -> tuple[int, int, int] | None:
+              match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", tag)
+              if not match:
+                  return None
+              return tuple(int(part) for part in match.groups())
+
+          text = pathlib.Path("pyproject.toml").read_text()
+          match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+          if not match:
+              raise SystemExit("Could not find project version in pyproject.toml")
+          pyproject_version = match.group(1)
+
+          all_tags = run("git", "tag", "--list", "v*.*.*").splitlines()
+          parsed_tags = []
+          for tag in all_tags:
+              parsed = parse_semver_tag(tag)
+              if parsed is not None:
+                  parsed_tags.append((parsed, tag))
+          parsed_tags.sort(key=lambda item: item[0])
+
+          latest_tag = parsed_tags[-1][1] if parsed_tags else ""
+          base_version = parsed_tags[-1][0] if parsed_tags else parse_tuple(pyproject_version)
+
+          log_range = f"{latest_tag}..HEAD" if latest_tag else "HEAD"
+          raw = run("git", "log", log_range, "--pretty=%s%n%b<<END>>")
+          chunks = [chunk.strip() for chunk in raw.split("<<END>>") if chunk.strip()]
+
+          # Conventional commits -> version bump mapping:
+          # major: *!: or BREAKING CHANGE
+          # minor: feat
+          # patch: fix, perf, revert
+          bump_order = {"patch": 1, "minor": 2, "major": 3}
+          bump = None
+
+          for chunk in chunks:
+              lines = chunk.splitlines()
+              subject = lines[0].strip() if lines else ""
+              body = "\n".join(lines[1:]) if len(lines) > 1 else ""
+
+              if "BREAKING CHANGE" in chunk or re.match(r"^[a-z]+(?:\([^)]+\))?!:", subject):
+                  current = "major"
+              elif re.match(r"^feat(?:\([^)]+\))?:", subject):
+                  current = "minor"
+              elif re.match(r"^(fix|perf|revert)(?:\([^)]+\))?:", subject):
+                  current = "patch"
+              else:
+                  current = None
+
+              if current and (bump is None or bump_order[current] > bump_order[bump]):
+                  bump = current
+
+          if bump is None:
+              print("release_required=false")
+              print("reason=no_semantic_release_commits")
+              print(f"previous_tag={latest_tag}")
+              raise SystemExit(0)
+
+          major, minor, patch = base_version
+          if bump == "major":
+              next_version = f"{major + 1}.0.0"
+          elif bump == "minor":
+              next_version = f"{major}.{minor + 1}.0"
+          else:
+              next_version = f"{major}.{minor}.{patch + 1}"
+
+          print("release_required=true")
+          print(f"bump={bump}")
+          print(f"previous_tag={latest_tag}")
+          print(f"version={next_version}")
+          print(f"tag=v{next_version}")
+          PY
+
+      - name: Skip when no releasable semantic commits
+        if: steps.meta.outputs.release_required != 'true'
+        run: |
+          echo "No release created."
+          echo "Reason: ${{ steps.meta.outputs.reason }}"
+          echo "Only these commit types trigger a release: feat, fix, perf, revert, and BREAKING CHANGE."
+
+      - name: Check whether computed tag already exists
+        id: tag_check
+        if: steps.meta.outputs.release_required == 'true'
+        run: |
+          if git show-ref --tags --verify --quiet "refs/tags/${{ steps.meta.outputs.tag }}"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip publish when release tag exists
+        if: steps.meta.outputs.release_required == 'true' && steps.tag_check.outputs.exists == 'true'
+        run: echo "Tag ${{ steps.meta.outputs.tag }} already exists. Skipping publish."
+
+      - name: Install test and build dependencies
+        if: steps.meta.outputs.release_required == 'true' && steps.tag_check.outputs.exists != 'true'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest ruff build
+
+      - name: Lint
+        if: steps.meta.outputs.release_required == 'true' && steps.tag_check.outputs.exists != 'true'
+        run: ruff check .
+
+      - name: Unit tests
+        if: steps.meta.outputs.release_required == 'true' && steps.tag_check.outputs.exists != 'true'
+        run: pytest -q
+
+      - name: Write computed version to pyproject.toml
+        if: steps.meta.outputs.release_required == 'true' && steps.tag_check.outputs.exists != 'true'
+        run: |
+          python - <<'PY'
+          import pathlib
+          import re
+
+          version = "${{ steps.meta.outputs.version }}"
+          path = pathlib.Path("pyproject.toml")
+          text = path.read_text()
+          updated, count = re.subn(
+              r'^version\s*=\s*"[^"]+"',
+              f'version = "{version}"',
+              text,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          if count != 1:
+              raise SystemExit("Failed to update version in pyproject.toml")
+          path.write_text(updated)
+          print(f"Updated pyproject version to {version}")
+          PY
+
+      - name: Build distribution artifacts
+        if: steps.meta.outputs.release_required == 'true' && steps.tag_check.outputs.exists != 'true'
+        run: python -m build
+
+      - name: Publish package to PyPI
+        if: steps.meta.outputs.release_required == 'true' && steps.tag_check.outputs.exists != 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Create GitHub release
+        if: steps.meta.outputs.release_required == 'true' && steps.tag_check.outputs.exists != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.meta.outputs.tag }}
+          generate_release_notes: true
+          files: dist/*

@@ -142,7 +142,31 @@ GitHub Actions runs on every pull request and executes:
 
 ## Publishing
 
-To publish a new version to PyPI:
+### Automatic publish on merge to `main` (GitHub Actions)
+
+This repo includes a release workflow at `.github/workflows/release.yml` that runs on every push to `main` (including merged PRs).
+
+It will:
+* inspect commits since the last release tag (`vX.Y.Z`)
+* compute the next semantic version from Conventional Commit types
+* skip publishing when there are no releasable commit types
+* run lint and unit tests
+* build `dist/*`
+* publish to PyPI
+* create a GitHub release/tag `v<computed-version>` with generated notes
+
+Version bump rules:
+* major: commit subject with `!` (example: `feat!:` or `fix(api)!:`) or commit body containing `BREAKING CHANGE`
+* minor: `feat:`
+* patch: `fix:`, `perf:`, `revert:`
+* no release: `docs:`, `chore:`, `ci:`, `test:`, `refactor:` (unless the commit is marked as breaking)
+
+Required repository secret:
+* `PYPI_API_TOKEN`: a PyPI API token (recommended scope: this project only)
+
+### Manual publish
+
+To publish manually to PyPI:
 
 1. Update the version in `pyproject.toml`
 2. Build the package:
