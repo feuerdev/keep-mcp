@@ -47,3 +47,8 @@ Thumbs.db
 uv.lock
 API_DOCS.md
 progress
+
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/

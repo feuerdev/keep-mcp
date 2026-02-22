@@ -1,6 +1,9 @@
 import gkeepapi
 import os
+import requests
 from dotenv import load_dotenv
+
+KEEP_MCP_LABEL = "keep-mcp"
 
 _keep_client = None
 
@@ -31,12 +34,39 @@ def get_client():
     keep = gkeepapi.Keep()
     
     # Authenticate
-    keep.authenticate(email, master_token)
+    try:
+        keep.authenticate(email, master_token)
+    except requests.exceptions.JSONDecodeError as exc:
+        raise RuntimeError(
+            "Google Keep API returned a non-JSON response during authentication. "
+            "This usually means the unofficial Keep API (notes/v1) is inaccessible "
+            "from this environment (HTTP 403/4xx). "
+            "Check that your GOOGLE_MASTER_TOKEN is valid and that the Keep API "
+            "is reachable from this network."
+        ) from exc
+    except gkeepapi.exception.LoginException as exc:
+        raise RuntimeError(
+            f"Google Keep login failed: {exc}. "
+            "Verify that GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN are correct."
+        ) from exc
     
     # Store the client for reuse
     _keep_client = keep
     
     return keep
+
+def serialize_label(label):
+    return {'id': label.id, 'name': label.name}
+
+
+def serialize_list_item(item):
+    return {
+        'id': item.id,
+        'text': item.text,
+        'checked': item.checked,
+        'parent_item_id': item.parent_item.id if item.parent_item else None,
+    }
+
 
 def serialize_note(note):
     """
@@ -48,36 +78,57 @@ def serialize_note(note):
     Returns:
         dict: A dictionary containing the note's id, title, text, pinned status, color and labels
     """
-    return {
+    payload = {
         'id': note.id,
         'title': note.title,
         'text': note.text,
+        'type': note.type.value,
         'pinned': note.pinned,
+        'archived': note.archived,
+        'trashed': note.trashed,
         'color': note.color.value if note.color else None,
-        'labels': [{'id': label.id, 'name': label.name} for label in note.labels.all()]
+        'labels': [serialize_label(label) for label in note.labels.all()],
+        'collaborators': list(note.collaborators.all()),
     }
+
+    if hasattr(note, 'items'):
+        payload['items'] = [serialize_list_item(item) for item in note.items]
+
+    payload['media'] = [
+        {
+            'blob_id': blob.id,
+            'type': blob.blob.type.value if blob.blob and blob.blob.type else None,
+        }
+        for blob in note.blobs
+    ]
+
+    return payload
+
+def is_unsafe_mode() -> bool:
+    return os.getenv('UNSAFE_MODE', '').lower() == 'true'
+
 
 def can_modify_note(note):
     """
     Check if a note can be modified based on label and environment settings.
-    
+
     Args:
         note: A Google Keep note object
-        
+
     Returns:
         bool: True if the note can be modified, False otherwise
     """
-    unsafe_mode = os.getenv('UNSAFE_MODE', '').lower() == 'true'
-    return unsafe_mode or has_keep_mcp_label(note)
+    return is_unsafe_mode() or has_keep_mcp_label(note)
+
 
 def has_keep_mcp_label(note):
     """
     Check if a note has the keep-mcp label.
-    
+
     Args:
         note: A Google Keep note object
-        
+
     Returns:
         bool: True if the note has the keep-mcp label, False otherwise
     """
-    return any(label.name == 'keep-mcp' for label in note.labels.all()) 
+    return any(label.name == KEEP_MCP_LABEL for label in note.labels.all())
