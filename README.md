@@ -72,6 +72,33 @@ By default, all destructive and modification operations are restricted to notes 
 }
 ```
 
+## Local development (uv + make)
+
+If you prefer a JS-style workflow (`npm i`, `npm start`), use the included `Makefile`:
+
+```bash
+make install   # like npm i
+make start     # like npm start
+make test
+make lint
+```
+
+Run the real-account smoke test with credentials:
+
+```bash
+GOOGLE_EMAIL="you@example.com" \
+GOOGLE_MASTER_TOKEN="..." \
+make smoke
+```
+
+Equivalent direct `uv` commands (without `make`):
+
+```bash
+UV_CACHE_DIR=/tmp/uv-cache uv venv --python 3.11 .venv
+UV_CACHE_DIR=/tmp/uv-cache uv pip install --python .venv/bin/python -e .
+UV_CACHE_DIR=/tmp/uv-cache uv run --no-sync --python .venv/bin/python -m server
+```
+
 ## Testing
 
 ### Unit tests (default)
@@ -85,7 +112,7 @@ It validates:
 Run locally:
 
 ```bash
-pytest -q
+make test
 ```
 
 ### Smoke test against a real Keep account
@@ -94,7 +121,7 @@ For additional confidence, run a basic lifecycle smoke test against a dedicated 
 ```bash
 GOOGLE_EMAIL="you@example.com" \
 GOOGLE_MASTER_TOKEN="..." \
-python scripts/smoke_test.py
+make smoke
 ```
 
 What it does:
@@ -126,6 +153,69 @@ To publish a new version to PyPI:
    ```bash
    pipx run twine upload --repository pypi dist/*
    ```
+
+## Run locally with MCP clients
+
+This is useful when you want a client to run this server from your local checkout instead of PyPI.
+
+1. Create a local virtualenv and install in editable mode:
+
+```bash
+cd /ABSOLUTE/PATH/TO/keep-mcp
+make install
+```
+
+2. Add the server to your MCP client config.
+
+### `config.toml` clients (Codex, Goose, etc.)
+
+```toml
+[mcp_servers.keep_mcp]
+command = "make"
+args = ["-C", "/ABSOLUTE/PATH/TO/keep-mcp", "start"]
+
+[mcp_servers.keep_mcp.env]
+GOOGLE_EMAIL = "you@example.com"
+GOOGLE_MASTER_TOKEN = "your-master-token"
+UNSAFE_MODE = "false"
+```
+
+### JSON `mcpServers` clients (Claude Desktop, Cursor, Cline, etc.)
+
+```json
+{
+  "mcpServers": {
+    "keep-mcp-local": {
+      "command": "make",
+      "args": ["-C", "/ABSOLUTE/PATH/TO/keep-mcp", "start"],
+      "env": {
+        "GOOGLE_EMAIL": "you@example.com",
+        "GOOGLE_MASTER_TOKEN": "your-master-token",
+        "UNSAFE_MODE": "false"
+      }
+    }
+  }
+}
+```
+
+Alternative (without `make`):
+
+```toml
+[mcp_servers.keep_mcp]
+command = "uv"
+args = [
+  "--directory", "/ABSOLUTE/PATH/TO/keep-mcp",
+  "run", "--no-sync", "--python", ".venv/bin/python",
+  "-m", "server"
+]
+```
+
+Notes:
+* Run `make install` once before starting from an MCP client.
+* Only the repo root path is required (no absolute `/.venv/bin/python` path).
+* Ensure `make` and `uv` are in your `PATH`.
+* Restart your MCP client after updating config files.
+* `UNSAFE_MODE` is optional; keep it `"false"` unless you explicitly want to modify non-`keep-mcp` notes.
 
 ## Troubleshooting
 
