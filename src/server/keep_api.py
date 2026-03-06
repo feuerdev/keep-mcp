@@ -7,6 +7,14 @@ KEEP_MCP_LABEL = "keep-mcp"
 
 _keep_client = None
 
+
+def _read_secret(env_var: str, secret_name: str) -> str | None:
+    secret_path = f"/run/secrets/{secret_name}"
+    if os.path.exists(secret_path):
+        with open(secret_path) as f:
+            return f.read().strip()
+    return os.getenv(env_var)
+
 def get_client():
     """
     Get or initialize the Google Keep client.
@@ -23,9 +31,9 @@ def get_client():
     # Load environment variables
     load_dotenv()
     
-    # Get credentials from environment variables
+    # Get credentials from environment variables or secret files
     email = os.getenv('GOOGLE_EMAIL')
-    master_token = os.getenv('GOOGLE_MASTER_TOKEN')
+    master_token = _read_secret('GOOGLE_MASTER_TOKEN', 'google_master_token')
     
     if not email or not master_token:
         raise ValueError("Missing Google Keep credentials. Please set GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN environment variables.")

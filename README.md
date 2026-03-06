@@ -6,6 +6,8 @@ MCP server for Google Keep
 
 ## How to use
 
+### Python
+
 1. Add the MCP server to your MCP servers:
 
 ```json
@@ -29,6 +31,62 @@ MCP server for Google Keep
 * `GOOGLE_MASTER_TOKEN`: Your Google account master token
 
 Check https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token and https://github.com/simon-weber/gpsoauth?tab=readme-ov-file#alternative-flow for more information.
+
+### Docker
+
+Build the image from source:
+
+```bash
+docker build -t keep-mcp .
+```
+
+Then add it to your MCP client config using `docker run`:
+
+```json
+"mcpServers": {
+  "keep-mcp-docker": {
+    "command": "docker",
+    "args": [
+      "run", "--rm", "-i",
+      "-e", "GOOGLE_EMAIL",
+      "-e", "GOOGLE_MASTER_TOKEN"
+    ],
+    "env": {
+      "GOOGLE_EMAIL": "you@example.com",
+      "GOOGLE_MASTER_TOKEN": "your-master-token"
+    }
+  }
+}
+```
+
+> **Note:** The `-i` flag is required for stdio-based MCP communication. `UNSAFE_MODE=true` can be added as an extra `-e UNSAFE_MODE` argument if needed.
+
+#### Passing the token as a Docker secret (recommended)
+
+Instead of passing `GOOGLE_MASTER_TOKEN` as an environment variable, you can mount it as a file:
+
+```bash
+# Write your token to a file (chmod 600 recommended)
+echo -n "your-master-token" > /run/secrets/google_master_token
+chmod 600 /run/secrets/google_master_token
+```
+
+# Then use
+```
+"mcpServers": {
+  "keep-mcp-docker": {
+    "command": "docker",
+    "args": [
+      "run", "--rm", "-i",
+      "-e", "GOOGLE_EMAIL=you@example.com",
+      "-v", "/run/secrets/google_master_token:/run/secrets/google_master_token:ro",
+      "keep-mcp"
+    ]
+  }
+}
+```
+
+The server reads `/run/secrets/google_master_token` first; if absent it falls back to the `GOOGLE_MASTER_TOKEN` environment variable.
 
 ## Features
 
