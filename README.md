@@ -72,6 +72,10 @@ By default, all destructive and modification operations are restricted to notes 
 }
 ```
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/feuerdev-keep-mcp).
+
 ## Local development (uv + make)
 
 If you prefer a JS-style workflow (`npm i`, `npm start`), use the included `Makefile`:
