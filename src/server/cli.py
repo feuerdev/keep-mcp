@@ -7,11 +7,23 @@ import json
 from typing import Any
 
 import gkeepapi
-from mcp.server.fastmcp import FastMCP
 
-from .keep_api import KEEP_MCP_LABEL, can_modify_note, get_client, has_keep_mcp_label, is_unsafe_mode, serialize_label, serialize_note
+try:
+    from mcp.server import MCPServer
+except ImportError:  # MCP SDK 1.x: FastMCP became MCPServer in 2.0
+    from mcp.server.fastmcp import FastMCP as MCPServer
 
-mcp = FastMCP("keep")
+from .keep_api import (
+    KEEP_MCP_LABEL,
+    can_modify_note,
+    get_client,
+    has_keep_mcp_label,
+    is_unsafe_mode,
+    serialize_label,
+    serialize_note,
+)
+
+mcp = MCPServer("keep")
 
 
 def _get_note_or_raise(note_id: str):
@@ -124,7 +136,7 @@ def add_list_item(note_id: str, text: str, checked: bool = False) -> str:
     _ensure_modifiable(note)
 
     if not isinstance(note, gkeepapi.node.List):
-        raise ValueError(f"Note with ID {note_id} is not a list")
+        raise TypeError(f"Note with ID {note_id} is not a list")
 
     item = note.add(text=text, checked=checked)
     keep.sync()
@@ -138,7 +150,7 @@ def update_list_item(note_id: str, item_id: str, text: str | None = None, checke
     _ensure_modifiable(note)
 
     if not isinstance(note, gkeepapi.node.List):
-        raise ValueError(f"Note with ID {note_id} is not a list")
+        raise TypeError(f"Note with ID {note_id} is not a list")
 
     item = note.get(item_id)
     if not item:
@@ -160,7 +172,7 @@ def delete_list_item(note_id: str, item_id: str) -> str:
     _ensure_modifiable(note)
 
     if not isinstance(note, gkeepapi.node.List):
-        raise ValueError(f"Note with ID {note_id} is not a list")
+        raise TypeError(f"Note with ID {note_id} is not a list")
 
     item = note.get(item_id)
     if not item:

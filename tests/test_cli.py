@@ -288,11 +288,11 @@ def test_delete_list_item_paths(keep):
 
 
 def test_list_item_requires_list_type(keep):
-    with pytest.raises(ValueError, match="not a list"):
+    with pytest.raises(TypeError, match="not a list"):
         cli.add_list_item("n1", "x")
-    with pytest.raises(ValueError, match="not a list"):
+    with pytest.raises(TypeError, match="not a list"):
         cli.update_list_item("n1", "i1", text="x")
-    with pytest.raises(ValueError, match="not a list"):
+    with pytest.raises(TypeError, match="not a list"):
         cli.delete_list_item("n1", "i1")
 
 

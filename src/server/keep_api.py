@@ -1,5 +1,6 @@
-import gkeepapi
 import os
+
+import gkeepapi
 import requests
 from dotenv import load_dotenv
 
