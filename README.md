@@ -24,6 +24,23 @@ MCP server for Google Keep
   }
 ```
 
+Or with `uvx`:
+
+```json
+  "mcpServers": {
+    "keep-mcp": {
+      "command": "uvx",
+      "args": [
+        "keep-mcp"
+      ],
+      "env": {
+        "GOOGLE_EMAIL": "Your Google Email",
+        "GOOGLE_MASTER_TOKEN": "Your Google Master Token - see README.md"
+      }
+    }
+  }
+```
+
 2. Add your credentials:
 * `GOOGLE_EMAIL`: Your Google account email address
 * `GOOGLE_MASTER_TOKEN`: Your Google account master token
