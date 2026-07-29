@@ -1,4 +1,7 @@
 import json
+import re
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
@@ -201,7 +204,7 @@ def test_find_forwards_filters(keep):
             trashed=False,
         )
     )
-    assert keep.last_find_kwargs["query"] == "q"
+    assert keep.last_find_kwargs["query"].pattern == "q"
     assert keep.last_find_kwargs["labels"] == ["l1"]
     assert [color.value for color in keep.last_find_kwargs["colors"]] == ["red"]
     assert isinstance(result, list)
@@ -210,6 +213,54 @@ def test_find_forwards_filters(keep):
 def test_find_without_colors_passes_none(keep):
     cli.find(query="q")
     assert keep.last_find_kwargs["colors"] is None
+
+
+def test_find_query_case_insensitive_by_default(keep):
+    cli.find(query="Hello")
+    pattern = keep.last_find_kwargs["query"]
+    assert isinstance(pattern, re.Pattern)
+    assert pattern.search("say HELLO there")
+    assert pattern.search("no match here") is None
+
+
+def test_find_query_case_sensitive_opt_in(keep):
+    cli.find(query="Hello", case_sensitive=True)
+    assert keep.last_find_kwargs["query"] == "Hello"
+
+
+def test_find_empty_query_and_no_dates_pass_through(keep):
+    cli.find()
+    assert keep.last_find_kwargs["query"] == ""
+    assert keep.last_find_kwargs["func"] is None
+
+
+def test_find_date_filter_func(keep):
+    cli.find(created_after="2026-07-01", updated_before="2026-08-01T00:00:00Z")
+    within = keep.last_find_kwargs["func"]
+
+    def note_with(created, updated):
+        return SimpleNamespace(
+            timestamps=SimpleNamespace(created=created, updated=updated)
+        )
+
+    utc = timezone.utc
+    assert within(note_with(datetime(2026, 7, 15, tzinfo=utc), datetime(2026, 7, 20, tzinfo=utc))) is True
+    assert within(note_with(datetime(2026, 6, 15, tzinfo=utc), datetime(2026, 7, 20, tzinfo=utc))) is False
+    assert within(note_with(datetime(2026, 7, 15, tzinfo=utc), datetime(2026, 8, 2, tzinfo=utc))) is False
+    # Naive timestamps (older gkeepapi) are treated as UTC, not an error.
+    assert within(note_with(datetime(2026, 7, 15), datetime(2026, 7, 20))) is True  # noqa: DTZ001
+    assert within(SimpleNamespace(timestamps=None)) is False
+
+
+def test_find_invalid_date_raises(keep):
+    with pytest.raises(ValueError, match="created_after"):
+        cli.find(created_after="not-a-date")
+
+
+def test_find_limit_caps_results(keep):
+    assert len(json.loads(cli.find())) == 2
+    assert len(json.loads(cli.find(limit=1))) == 1
+    assert json.loads(cli.find(limit=0)) == []
 
 
 def test_find_invalid_color_raises(keep, monkeypatch):

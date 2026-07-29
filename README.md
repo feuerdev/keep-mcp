@@ -50,7 +50,7 @@ Check https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token and ht
 ## Features
 
 ### Query and read tools
-* `find`: Search notes with optional filters for labels, colors, pinned, archived, and trashed
+* `find`: Search notes (case-insensitive by default) with optional filters for labels, colors, pinned, archived, trashed, creation/update date ranges (ISO 8601, UTC), and a result limit
 * `get_note`: Get a single note by ID
 
 ### Creation and update tools
