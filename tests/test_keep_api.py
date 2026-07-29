@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from server.keep_api import can_modify_note, serialize_note
@@ -70,6 +71,23 @@ def test_serialize_note_for_note_type():
 def test_serialize_note_for_list_type():
     data = serialize_note(DummyListNote())
     assert data["items"][0]["id"] == "i1"
+
+
+def test_serialize_note_includes_timestamps():
+    note = DummyNote()
+    note.timestamps = SimpleNamespace(
+        created=datetime(2026, 7, 1, 12, 0, 0, tzinfo=timezone.utc),
+        updated=datetime(2026, 7, 2, 8, 30, 0, tzinfo=timezone.utc),
+    )
+    data = serialize_note(note)
+    assert data["created"] == "2026-07-01T12:00:00+00:00"
+    assert data["updated"] == "2026-07-02T08:30:00+00:00"
+
+
+def test_serialize_note_without_timestamps_yields_none():
+    data = serialize_note(DummyNote())
+    assert data["created"] is None
+    assert data["updated"] is None
 
 
 def test_can_modify_note_respects_label(monkeypatch):

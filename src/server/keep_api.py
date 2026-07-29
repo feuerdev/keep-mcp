@@ -79,6 +79,10 @@ def serialize_note(note):
     Returns:
         dict: A dictionary containing the note's id, title, text, pinned status, color and labels
     """
+    timestamps = getattr(note, 'timestamps', None)
+    created = getattr(timestamps, 'created', None)
+    updated = getattr(timestamps, 'updated', None)
+
     payload = {
         'id': note.id,
         'title': note.title,
@@ -88,6 +92,8 @@ def serialize_note(note):
         'archived': note.archived,
         'trashed': note.trashed,
         'color': note.color.value if note.color else None,
+        'created': created.isoformat() if created else None,
+        'updated': updated.isoformat() if updated else None,
         'labels': [serialize_label(label) for label in note.labels.all()],
         'collaborators': list(note.collaborators.all()),
     }
