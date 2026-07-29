@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "gkeepapi>=0.16.0",
-    "mcp[cli]",
+    "mcp[cli]>=1.2,<3",
+    "python-dotenv>=1.0",
+    "requests>=2.28",
 ]
 authors = [
     { name = "Jannik Feuerhahn", email = "jannik@feuer.dev" }
