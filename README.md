@@ -42,10 +42,22 @@ Or with `uvx`:
 ```
 
 2. Add your credentials:
+
 * `GOOGLE_EMAIL`: Your Google account email address
 * `GOOGLE_MASTER_TOKEN`: Your Google account master token
 
-Check https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token and https://github.com/simon-weber/gpsoauth?tab=readme-ov-file#alternative-flow for more information.
+### Obtain a Google master token
+
+`keep-mcp` uses [gkeepapi](https://gkeepapi.readthedocs.io/), which connects to Google Keep through an unofficial private API. A Google master token has full access to your account. Treat it like a password and never commit or share it.
+
+Use the browser-assisted token exchange documented by `gpsoauth`. Choose how you want to run the exchange:
+
+* **Local Python:** Follow [`gpsoauth`'s alternative flow](https://github.com/simon-weber/gpsoauth#alternative-flow).
+* **Docker:** Follow [gkeepapi's "Obtaining a Master Token" instructions](https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token). This runs the same exchange without requiring a local Python installation.
+
+Both options require the browser `oauth_token` described in the `gpsoauth` documentation.
+
+Older instructions may ask for your Google password or an app password and call `perform_master_login()`. That flow is unreliable and can return `BadAuthentication`. Use the browser-assisted flow above instead.
 
 ## Features
 
