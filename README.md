@@ -26,6 +26,23 @@ MCP server for Google Keep
   }
 ```
 
+Or with `uvx`:
+
+```json
+  "mcpServers": {
+    "keep-mcp": {
+      "command": "uvx",
+      "args": [
+        "keep-mcp"
+      ],
+      "env": {
+        "GOOGLE_EMAIL": "Your Google Email",
+        "GOOGLE_MASTER_TOKEN": "Your Google Master Token - see README.md"
+      }
+    }
+  }
+```
+
 2. Add your credentials:
 * `GOOGLE_EMAIL`: Your Google account email address
 * `GOOGLE_MASTER_TOKEN`: Your Google account master token
@@ -91,7 +108,7 @@ The server reads `/run/secrets/google_master_token` first; if absent it falls ba
 ## Features
 
 ### Query and read tools
-* `find`: Search notes with optional filters for labels, colors, pinned, archived, and trashed
+* `find`: Search notes (case-insensitive by default) with optional filters for labels, colors, pinned, archived, trashed, creation/update date ranges (ISO 8601, UTC), and a result limit
 * `get_note`: Get a single note by ID
 
 ### Creation and update tools
