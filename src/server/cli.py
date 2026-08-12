@@ -4,6 +4,7 @@ Provides tools for interacting with Google Keep notes through MCP.
 """
 
 import json
+import os
 import re
 from datetime import datetime, timezone
 from itertools import islice
@@ -19,9 +20,11 @@ except ImportError:  # MCP SDK 1.x: FastMCP became MCPServer in 2.0
 from .keep_api import (
     KEEP_MCP_LABEL,
     can_modify_note,
+    fetch_blob_bytes,
     get_client,
     has_keep_mcp_label,
     is_unsafe_mode,
+    media_extension,
     serialize_label,
     serialize_note,
 )
@@ -470,6 +473,44 @@ def list_note_media(note_id: str) -> str:
         )
 
     return json.dumps(media)
+
+
+@mcp.tool()
+def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> str:
+    """Download a note's media (images, drawings, audio) to a local directory.
+
+    The links from list_note_media require Google authentication and answer
+    403 to plain HTTP clients; this tool downloads through the server's own
+    authenticated session instead. Files are written to dest_dir (created if
+    missing) as <blob_id><ext>, with the extension derived from the response
+    Content-Type. blob_id restricts the download to a single blob. Returns a
+    JSON list of {blob_id, type, path, bytes, content_type}.
+    """
+    keep, note = _get_note_or_raise(note_id)
+
+    blobs = [blob for blob in note.blobs if blob_id is None or blob.id == blob_id]
+    if blob_id is not None and not blobs:
+        raise ValueError(f"Blob with ID {blob_id} not found on note {note_id}")
+
+    os.makedirs(dest_dir, exist_ok=True)
+
+    saved = []
+    for blob in blobs:
+        content, content_type = fetch_blob_bytes(keep, blob)
+        path = os.path.join(dest_dir, f"{blob.id}{media_extension(content_type)}")
+        with open(path, "wb") as fh:
+            fh.write(content)
+        saved.append(
+            {
+                "blob_id": blob.id,
+                "type": blob.blob.type.value if blob.blob and blob.blob.type else None,
+                "path": path,
+                "bytes": len(content),
+                "content_type": content_type,
+            }
+        )
+
+    return json.dumps(saved)
 
 
 def main():

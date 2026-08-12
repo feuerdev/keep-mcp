@@ -429,6 +429,22 @@ def test_list_note_media(keep):
     assert media[0]["media_link"].startswith("https://media/")
 
 
+def test_download_media_writes_files(keep, monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "fetch_blob_bytes", lambda k, b: (b"png-bytes", "image/png"))
+    saved = json.loads(cli.download_media("n1", str(tmp_path)))
+    assert saved[0]["blob_id"] == "b1"
+    assert saved[0]["type"] == "IMAGE"
+    assert saved[0]["path"].endswith("b1.png")
+    assert saved[0]["bytes"] == len(b"png-bytes")
+    with open(saved[0]["path"], "rb") as fh:
+        assert fh.read() == b"png-bytes"
+
+
+def test_download_media_unknown_blob(keep, tmp_path):
+    with pytest.raises(ValueError, match="Blob with ID nope not found"):
+        cli.download_media("n1", str(tmp_path), blob_id="nope")
+
+
 def test_modification_guard_blocks_when_unlabeled(keep, monkeypatch):
     keep.notes["n1"].labels = DummyLabels()
     monkeypatch.setattr(cli, "can_modify_note", lambda _: False)
