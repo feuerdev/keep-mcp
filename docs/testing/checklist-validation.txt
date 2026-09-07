@@ -1,0 +1,48 @@
+Checklist validation verification
+2026-09-07T11:33:00.997655+00:00
+Real gkeepapi objects; sync mocked; no real Google account used.
+
+$ .venv/bin/python -m pytest tests/test_checklist_validation.py -v --tb=short
+============================= test session starts ==============================
+platform darwin -- Python 3.11.11, pytest-9.1.1, pluggy-1.6.0 -- /Users/jannik/Documents/DEV/feuerdev/keep-mcp/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/jannik/Documents/DEV/feuerdev/keep-mcp
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.14.2
+collecting ... collected 8 items
+
+tests/test_checklist_validation.py::test_create_list_rejects_non_boolean_checked_without_creating_note[false] PASSED [ 12%]
+tests/test_checklist_validation.py::test_create_list_rejects_non_boolean_checked_without_creating_note[true] PASSED [ 25%]
+tests/test_checklist_validation.py::test_create_list_rejects_non_boolean_checked_without_creating_note[0] PASSED [ 37%]
+tests/test_checklist_validation.py::test_create_list_rejects_non_boolean_checked_without_creating_note[1] PASSED [ 50%]
+tests/test_checklist_validation.py::test_create_list_rejects_non_boolean_checked_without_creating_note[None] PASSED [ 62%]
+tests/test_checklist_validation.py::test_create_list_preserves_boolean_checked_and_default PASSED [ 75%]
+tests/test_checklist_validation.py::test_update_list_text_does_not_partially_change_title PASSED [ 87%]
+tests/test_checklist_validation.py::test_update_list_title_remains_supported PASSED [100%]
+
+============================== 8 passed in 0.66s ===============================
+Exit code: 0
+
+$ .venv/bin/python -m pytest -q --cov=src/server --cov-report=term-missing --cov-fail-under=70
+................................................                         [100%]
+================================ tests coverage ================================
+______________ coverage: platform darwin, python 3.11.11-final-0 _______________
+
+Name                     Stmts   Miss  Cover   Missing
+------------------------------------------------------
+src/server/__init__.py       0      0   100%
+src/server/__main__.py       3      0   100%
+src/server/cli.py          273      6    98%   16-17, 99, 101, 425, 487
+src/server/keep_api.py      42      4    90%   40-49
+------------------------------------------------------
+TOTAL                      318     10    97%
+Required test coverage of 70% reached. Total coverage: 96.86%
+48 passed in 1.08s
+Exit code: 0
+
+$ .venv/bin/python -m ruff check .
+All checks passed!
+Exit code: 0
+
+$ .venv/bin/python -m compileall -q src
+Exit code: 0
