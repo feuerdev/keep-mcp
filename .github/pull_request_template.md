@@ -3,8 +3,9 @@
 ## Testing
 
 <!-- Include commands, inputs, and results. Features and fixes require screenshots
-of the working behaviour. See CONTRIBUTING.md. State any mocks or test-account use. -->
+of real use in the MCP client and Google Keep. Put test output in code blocks.
+See CONTRIBUTING.md. Record client/version, server build and coverage gaps. -->
 
 - [ ] Regression tests added for bug fixes
 - [ ] `make test` and `make lint` pass
-- [ ] Screenshots attached for features and fixes
+- [ ] Real client interaction and Google Keep screenshots attached for features and fixes
