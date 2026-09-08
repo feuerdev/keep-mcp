@@ -9,10 +9,11 @@ Every feature or bug-fix PR must include visual evidence that the changed behavi
 works, with screenshots at minimum. Put the screenshots in the PR description with
 the steps and inputs used to reproduce the result.
 
-Show real use in both the MCP client and Google Keep: the prompt, actual tool
-invocation/result, and the corresponding visible Keep state. Use whichever client
-is being tested and record its name/version and the server build. An assistant's
-success message alone does not prove that the operation worked.
+Show the real MCP client prompt and actual tool invocation/result, paired with
+screenshots of the corresponding Google Keep state. Prefer a CLI client when
+available and quote its transcript in code blocks. Client UI screenshots are
+optional. Record the client name/version and server build. An assistant's success
+message alone does not prove that the operation worked.
 
 Put test results and logs in code blocks. Screenshots of tests, terminals, source
 code, or reconstructed interfaces do not satisfy the real-use requirement. If a

@@ -39,7 +39,8 @@ Do not use list-item tools as a fallback."
 Expect an error directing the caller to checklist item tools. Verify the title is
 still `<title>` and the item is still 'Buy milk', unchecked. Then ask the client to
 pin this fixture with `pin_note`, which syncs cached changes, and reload Keep. The
-original title and item must still be intact. Capture the error exchange and final
+original title and item must still be intact. Run rejection and pinning in the same
+server process, including when using a CLI client. Capture the error exchange and final
 Keep state, and record the extra sync step so the outcome is reproducible.
 
 ## Supported title update

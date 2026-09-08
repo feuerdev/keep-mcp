@@ -7,8 +7,15 @@ description: Capture reproducible real-use evidence for keep-mcp features and fi
 
 Prove the action through the actual MCP client and verify its effect independently
 in Google Keep. Test output belongs in code blocks, never screenshot substitutes.
-Do not prescribe a client. Use the user's choice, or an available configured client,
-and record its name and version. Browser/native UI tooling may vary by environment.
+Prefer a CLI-based MCP client when available. Use the current agent's connected
+MCP tools if they target the verified build, otherwise use a bounded CLI invocation
+such as Codex exec or Cursor CLI. Honour the user's client choice and record its
+name/version. A desktop client is a fallback, not a requirement.
+
+Save the exact prompt and actual MCP call/result events as text. CLI transcripts
+belong in code blocks; client screenshots are optional. Google Keep screenshots
+still provide the independent visual evidence. Read [cli-runs.md](references/cli-runs.md)
+when using a CLI client.
 
 ## Preflight
 
@@ -35,11 +42,13 @@ and record its name and version. Browser/native UI tooling may vary by environme
 1. Write down the exact prompt, expected MCP operation/arguments, expected visible
    state and timeout. Use a fresh fixture per scenario. Fixture setup also goes
    through the client when feasible; identify any separate setup method explicitly.
-2. Capture the relevant starting state in Keep. For creation, use a scoped search
-   showing the unique fixture does not yet exist.
-3. Enter the prompt through the real client UI. Expand tool details and capture the
-   prompt plus actual invocation/result. Several screenshots are fine if needed for
-   readability. An assistant's success message alone is insufficient.
+2. Plan only the Keep checkpoints needed to prove the visible outcome. Use the
+   client transcript for intermediate checks. Batch independent final fixture
+   checks into one scoped Keep view when readable. Capture a before state when
+   needed to demonstrate a change; do not take a screenshot after every tool call.
+3. Submit the saved prompt through the real MCP client. With a CLI, retain its
+   structured tool-call events and results. With a desktop client, expand the tool
+   details and capture them. An assistant's success message alone is insufficient.
 4. Match actual arguments and returned note ID against the scenario. If the model
    corrects invalid input, substitutes another tool, or refuses to call, mark that
    negative case **not exercised**. One clarified retry is reasonable; don't keep
@@ -49,6 +58,8 @@ and record its name and version. Browser/native UI tooling may vary by environme
    wait, for example to 60 seconds. A timeout is inconclusive, not proof of absence.
    For failed updates, also make a benign supported update and reload: this helps
    expose unintended cached mutations that could be synced on a later request.
+   Keep the rejected update and follow-up sync in the same server process; a fresh
+   CLI invocation can discard the very cached mutation this scenario tests.
 6. Capture the resulting Keep state. Capture before-build evidence on separate
    fixtures when practical; don't confuse a starting state with reproduction on an
    old build. Never stage expected UI using browser edits or mock pages.
@@ -60,6 +71,8 @@ and record its name and version. Browser/native UI tooling may vary by environme
    trash through the client. Verify cleanup and record any leftover IDs. If a call
    times out, search for the unique title before retrying creation or cleanup.
 
+Use browser/computer tools for Keep checkpoints and screenshot capture, not to
+drive a client that has a usable CLI. Stop inspecting once a checkpoint is clear.
 Use screenshots from supported browser/native capture tools. Load the relevant
 browser skill when available. No generated screenshots, reconstructed conversations,
 or screenshots of pytest/terminal output in place of real use.

@@ -5,7 +5,8 @@ Unexecuted scenarios remain pending, never prefilled as passed.
 
 - Run ID and UTC time:
 - PR and server commit / dirty changes:
-- Client name and version:
+- Client name/version and CLI or desktop mode:
+- Saved prompt, invocation command and actual tool-event transcript paths:
 - Server name selected in client:
 - Verified launch command, interpreter, SDK version, transport:
 - How the running process/build was verified:
@@ -30,7 +31,7 @@ Client: <name/version>. Server: <commit and SDK>. Transport: <transport>.
 Reproduction: <fixture setup, prompt and any extra sync step>.
 
 - <Observed result supported by actual screenshots>
-  <Client prompt and expanded MCP invocation screenshot>
+  <CLI prompt and actual MCP call/result in a code block, or expanded client UI capture>
   <Corresponding Google Keep screenshot>
 
 Automated test results go in a fenced code block, copied from execution output.

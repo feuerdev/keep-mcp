@@ -3,7 +3,8 @@
 ## Testing
 
 <!-- Include commands, inputs, and results. Features and fixes require screenshots
-of real use in the MCP client and Google Keep. Put test output in code blocks.
+of real Google Keep state, paired with actual MCP client calls/results. CLI
+transcripts and test output go in code blocks; client UI screenshots are optional.
 See CONTRIBUTING.md. Record client/version, server build and coverage gaps. -->
 
 - [ ] Regression tests added for bug fixes
