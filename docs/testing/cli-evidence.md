@@ -97,8 +97,9 @@ title, unchecked Buy milk, and checked Pack bag.
 
 ## Coverage
 
-The title-only update scenario and a live reproduction on the old build remain
-unexecuted. The initial CLI attempt stopped at a tool-approval error before
+The title-only update and invalid-boolean CLI checks are now recorded in
+[the follow-up evidence](cli-title-evidence.md). A live reproduction on the old
+build was not performed. The initial CLI attempt stopped at a tool-approval error before
 reaching Keep. The completed run used per-tool approval for the authorised fixture
 operations without changing global client configuration.
 
