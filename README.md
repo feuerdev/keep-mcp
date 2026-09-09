@@ -93,6 +93,7 @@ Older instructions may ask for your Google password or an app password and call 
 * `add_note_collaborator`: Add a collaborator email to a note
 * `remove_note_collaborator`: Remove a collaborator email from a note
 * `list_note_media`: List media blobs for a note (with media links)
+* `download_media`: Download a note's media (images, drawings, audio) to a local directory through the authenticated session (the raw media links answer 403 to plain HTTP clients)
 
 By default, all destructive and modification operations are restricted to notes that have were created by the MCP server (i.e. have the keep-mcp label). Set `UNSAFE_MODE` to `true` to bypass this restriction.
 

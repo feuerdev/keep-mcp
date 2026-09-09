@@ -111,6 +111,57 @@ def serialize_note(note):
 
     return payload
 
+_MEDIA_EXTENSIONS = {
+    'image/png': '.png',
+    'image/jpeg': '.jpg',
+    'image/gif': '.gif',
+    'image/webp': '.webp',
+    'audio/3gpp': '.3gp',
+    'audio/amr': '.amr',
+    'audio/mpeg': '.mp3',
+}
+
+
+def media_extension(content_type):
+    """
+    Map a media response Content-Type to a file extension.
+
+    Args:
+        content_type: The Content-Type header value (may carry parameters)
+
+    Returns:
+        str: A dotted extension, '.bin' when the type is unknown or missing
+    """
+    if not content_type:
+        return '.bin'
+    return _MEDIA_EXTENSIONS.get(content_type.split(';')[0].strip().lower(), '.bin')
+
+
+def fetch_blob_bytes(keep, blob):
+    """
+    Download a media blob through the authenticated Keep session.
+
+    The links returned by getMediaLink() require Google authentication and
+    answer 403 to plain HTTP clients, so the download rides the same session
+    and credentials the server is already authenticated with.
+
+    Args:
+        keep: Authenticated gkeepapi.Keep client
+        blob: A note media blob node
+
+    Returns:
+        tuple: (bytes, content_type) of the downloaded media
+    """
+    url = keep.getMediaLink(blob)
+    media_api = keep._media_api
+    response = media_api._send(url=url, method='GET')
+    if response.status_code in (400, 401, 403):
+        # Some media endpoints reject the OAuth header; retry bare on the same session.
+        response = media_api._session.get(url)
+    response.raise_for_status()
+    return response.content, response.headers.get('Content-Type')
+
+
 def is_unsafe_mode() -> bool:
     return os.getenv('UNSAFE_MODE', '').lower() == 'true'
 
