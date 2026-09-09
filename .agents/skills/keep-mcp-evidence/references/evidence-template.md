@@ -1,6 +1,6 @@
 # Evidence run template
 
-Store a filled copy locally for each run. Omit account identifiers and secrets.
+Store a filled copy locally for each run, outside version control. Omit account identifiers and secrets.
 Unexecuted scenarios remain pending, never prefilled as passed.
 
 - Run ID and UTC time:

@@ -84,7 +84,13 @@ observations in an ignored local `testing-evidence/<PR>/<run-id>/` directory. Th
 manifest records client/build, fixture IDs, prompts, actual calls, timestamps,
 assertions, screenshot filenames, coverage gaps and cleanup. Never include secrets.
 Publish only reviewed screenshots and selected non-sensitive facts to the requested
-PR when authorized. Keep raw diagnostics local; quote decisive output in code blocks.
+PR when authorized. Attach screenshots directly to the PR and quote decisive CLI
+output in collapsible code blocks in its description or a comment. Keep run-specific
+screenshots, transcripts and reports out of version control unless the user explicitly
+requests otherwise. Do not create a repository evidence folder as an upload workaround.
+If attachments are blocked, preserve the files locally and report the blocker.
+Offer the files for manual attachment instead of escalating into desktop automation.
+Reusable recipes belong in the skill; individual run results belong in the PR.
 
 If login, client access or build provenance is unavailable, report the exact blocker,
 leave the PR draft, and preserve the recipe for resumption. Do not mark the screenshot

@@ -22,7 +22,9 @@ coverage separately. Keep the PR draft while required real-use evidence is missi
 
 Use the client-neutral [keep-mcp-evidence skill](.agents/skills/keep-mcp-evidence/SKILL.md)
 for scenario recipes, capture requirements and cleanup. Keep raw captures local in
-`testing-evidence/`, then attach only reviewed screenshots to the PR.
+`testing-evidence/`, then attach only reviewed screenshots directly to the PR.
+Put relevant CLI transcripts in collapsible code blocks in the PR. Do not commit
+run-specific screenshots, transcripts or reports unless explicitly requested.
 
 Capture the failing case before the fix when practical, and the working case after
 it. Videos can supplement screenshots. Remove credentials, tokens, and private note
