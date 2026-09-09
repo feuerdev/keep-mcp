@@ -52,3 +52,6 @@ progress
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Local real-use evidence, including private raw observations
+testing-evidence/

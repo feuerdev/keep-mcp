@@ -2,6 +2,8 @@
 
 MCP server for Google Keep
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and required visual evidence.
+
 ![keep-mcp](https://github.com/user-attachments/assets/f50c4ae6-4d35-4bb6-a494-51c67385f1b6)
 
 ## How to use

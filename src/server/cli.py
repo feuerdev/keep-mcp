@@ -186,13 +186,17 @@ def create_list(title: str | None = None, items: list[dict[str, Any]] | None = N
     """
     Create a new checklist note.
 
-    items should be objects like: {"text": "task", "checked": false}
+    items should be objects like: {"text": "task", "checked": false}.
+    checked must be a boolean when supplied and defaults to false.
     """
     keep = get_client()
     formatted_items = None
     if items:
+        for item in items:
+            if not isinstance(item.get("checked", False), bool):
+                raise TypeError("Each item's checked field must be a boolean")
         formatted_items = [
-            (item.get("text", ""), bool(item.get("checked", False))) for item in items
+            (item.get("text", ""), item.get("checked", False)) for item in items
         ]
 
     note = keep.createList(title=title, items=formatted_items)
@@ -262,9 +266,12 @@ def delete_list_item(note_id: str, item_id: str) -> str:
 
 @mcp.tool()
 def update_note(note_id: str, title: str | None = None, text: str | None = None) -> str:
-    """Update a note's properties."""
+    """Update a note's title and text, or a checklist's title. Use item tools for checklist text."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
+
+    if text is not None and isinstance(note, gkeepapi.node.List):
+        raise ValueError("Cannot replace checklist text: use the checklist item tools")
 
     if title is not None:
         note.title = title
