@@ -1,3 +1,4 @@
+import io
 from server import keep_api
 
 
@@ -26,6 +27,23 @@ def test_get_client_authenticates_and_caches(monkeypatch):
     assert first is created
     assert second is created
     assert created.auth_calls == [("user@example.com", "token")]
+
+
+def test_get_client_reads_token_from_secret_file(monkeypatch):
+    keep_api._keep_client = None
+    created = DummyKeep()
+
+    monkeypatch.setattr(keep_api, "load_dotenv", lambda: None)
+    monkeypatch.setattr(keep_api.os, "getenv", lambda key: {
+        "GOOGLE_EMAIL": "user@example.com",
+    }.get(key))
+    monkeypatch.setattr(keep_api.os.path, "exists", lambda p: p == "/run/secrets/google_master_token")
+    monkeypatch.setattr("builtins.open", lambda p, *a, **kw: io.StringIO("token-from-file\n"))
+    monkeypatch.setattr(keep_api.gkeepapi, "Keep", lambda: created)
+
+    keep_api.get_client()
+
+    assert created.auth_calls == [("user@example.com", "token-from-file")]
 
 
 def test_get_client_raises_when_missing_credentials(monkeypatch):
