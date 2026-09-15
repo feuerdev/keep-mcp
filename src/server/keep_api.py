@@ -16,8 +16,15 @@ def keep_operation(func):
     """Serialize access to the shared Keep tree, including mutation and sync."""
     @wraps(func)
     def wrapped(*args, **kwargs):
+        global _keep_client
         with _client_lock:
-            return func(*args, **kwargs)
+            try:
+                return func(*args, **kwargs)
+            except Exception:
+                # A failed operation can leave unsaved or prematurely cleaned
+                # mutations in memory. Reload remote state on the next call.
+                _keep_client = None
+                raise
     return wrapped
 
 
@@ -25,7 +32,7 @@ def keep_operation(func):
 def get_client():
     """
     Get a freshly synced Google Keep client.
-    This ensures we only authenticate once and reuse the client.
+    Reuse the authenticated client until an operation fails.
     
     Returns:
         gkeepapi.Keep: Authenticated Keep client

@@ -1,3 +1,5 @@
+import pytest
+
 from server import keep_api
 
 
@@ -138,3 +140,51 @@ def test_tools_do_not_overlap_access_to_shared_state(monkeypatch):
         first.result()
         second.result()
     assert overlap.is_set()
+
+
+@pytest.mark.parametrize("remote_committed", [False, True])
+def test_failed_write_does_not_leave_phantom_state_for_next_read(monkeypatch, remote_committed):
+    import json
+
+    import gkeepapi
+    import requests
+
+    from server import cli
+
+    cached = gkeepapi.Keep()
+    note = cached.createNote('Original title', 'Test fixture')
+    note.labels.add(cached.createLabel('keep-mcp'))
+    for node in cached._findDirtyNodes():
+        node.save()
+    for label in cached.labels():
+        label.save()
+    remote_state = cached.dump()
+    requests_sent = []
+
+    def changes(**kwargs):
+        requests_sent.append(kwargs['nodes'])
+        if len(requests_sent) == 2:
+            if remote_committed:
+                remote_state.clear()
+                remote_state.update(cached.dump())
+            raise requests.ConnectionError('Injected connection failure')
+        return {'toVersion': '1', 'truncated': False}
+
+    monkeypatch.setattr(cached._keep_api, 'changes', changes)
+    monkeypatch.setattr(keep_api, '_keep_client', cached)
+    monkeypatch.setattr(keep_api, 'load_dotenv', lambda: None)
+    monkeypatch.setenv('GOOGLE_EMAIL', 'fixture@example.com')
+    monkeypatch.setenv('GOOGLE_MASTER_TOKEN', 'fake')
+    monkeypatch.setenv('UNSAFE_MODE', 'false')
+
+    # A new authenticated client sees the authoritative remote snapshot.
+    fresh = gkeepapi.Keep()
+    monkeypatch.setattr(fresh, 'authenticate', lambda *args: fresh.restore(remote_state))
+    monkeypatch.setattr(keep_api.gkeepapi, 'Keep', lambda: fresh)
+
+    with pytest.raises(requests.ConnectionError, match='Injected connection failure'):
+        cli.update_note(note.id, title='Uncommitted title')
+
+    assert any(node.get('title') == 'Uncommitted title' for node in requests_sent[1])
+    result = json.loads(cli.get_note(note.id))
+    assert result['title'] == ('Uncommitted title' if remote_committed else 'Original title')

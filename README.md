@@ -12,7 +12,9 @@ Each tool call refreshes the cached Keep state before reading or modifying it,
 so edits made in Google Keep are visible on the next call. Calls within one server
 process run one at a time to protect the shared client. This adds a sync request
 to cached reads and makes simultaneous calls wait for the current operation.
-If refreshing fails, the tool returns an error instead of using stale state.
+If an operation fails, the cached client is discarded and the next call
+reauthenticates and reloads remote state. Failed writes are not automatically
+retried: a connection failure can leave their remote outcome unknown.
 
 ## How to use
 
