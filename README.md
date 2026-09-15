@@ -6,6 +6,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and required 
 
 ![keep-mcp](https://github.com/user-attachments/assets/f50c4ae6-4d35-4bb6-a494-51c67385f1b6)
 
+## Sync behaviour
+
+Each tool call refreshes the cached Keep state before reading or modifying it,
+so edits made in Google Keep are visible on the next call. Calls within one server
+process run one at a time to protect the shared client. This adds a sync request
+to cached reads and makes simultaneous calls wait for the current operation.
+If refreshing fails, the tool returns an error instead of using stale state.
+
 ## How to use
 
 1. Add the MCP server to your MCP servers:

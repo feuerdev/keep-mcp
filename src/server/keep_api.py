@@ -1,4 +1,6 @@
 import os
+from functools import wraps
+from threading import RLock
 
 import gkeepapi
 import requests
@@ -7,10 +9,22 @@ from dotenv import load_dotenv
 KEEP_MCP_LABEL = "keep-mcp"
 
 _keep_client = None
+_client_lock = RLock()
 
+
+def keep_operation(func):
+    """Serialize access to the shared Keep tree, including mutation and sync."""
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+        with _client_lock:
+            return func(*args, **kwargs)
+    return wrapped
+
+
+@keep_operation
 def get_client():
     """
-    Get or initialize the Google Keep client.
+    Get a freshly synced Google Keep client.
     This ensures we only authenticate once and reuse the client.
     
     Returns:
@@ -19,6 +33,7 @@ def get_client():
     global _keep_client
     
     if _keep_client is not None:
+        _keep_client.sync()
         return _keep_client
     
     # Load environment variables
