@@ -24,6 +24,7 @@ from .keep_api import (
     get_client,
     has_keep_mcp_label,
     is_unsafe_mode,
+    keep_operation,
     media_extension,
     serialize_label,
     serialize_note,
@@ -108,6 +109,7 @@ def _build_time_filter(
 
 
 @mcp.tool()
+@keep_operation
 def find(
     query: str = "",
     labels: list[str] | None = None,
@@ -162,6 +164,7 @@ def find(
 
 
 @mcp.tool()
+@keep_operation
 def get_note(note_id: str) -> str:
     """Get a note by ID."""
     _, note = _get_note_or_raise(note_id)
@@ -169,6 +172,7 @@ def get_note(note_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def create_note(title: str | None = None, text: str | None = None) -> str:
     """Create a new note with title and text."""
     keep = get_client()
@@ -185,6 +189,7 @@ def create_note(title: str | None = None, text: str | None = None) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def create_list(title: str | None = None, items: list[dict[str, Any]] | None = None) -> str:
     """
     Create a new checklist note.
@@ -214,6 +219,7 @@ def create_list(title: str | None = None, items: list[dict[str, Any]] | None = N
 
 
 @mcp.tool()
+@keep_operation
 def add_list_item(note_id: str, text: str, checked: bool = False) -> str:
     """Add an item to a checklist note."""
     keep, note = _get_note_or_raise(note_id)
@@ -228,6 +234,7 @@ def add_list_item(note_id: str, text: str, checked: bool = False) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def update_list_item(note_id: str, item_id: str, text: str | None = None, checked: bool | None = None) -> str:
     """Update checklist item text and/or checked state."""
     keep, note = _get_note_or_raise(note_id)
@@ -250,6 +257,7 @@ def update_list_item(note_id: str, item_id: str, text: str | None = None, checke
 
 
 @mcp.tool()
+@keep_operation
 def delete_list_item(note_id: str, item_id: str) -> str:
     """Delete a checklist item."""
     keep, note = _get_note_or_raise(note_id)
@@ -268,6 +276,7 @@ def delete_list_item(note_id: str, item_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def update_note(note_id: str, title: str | None = None, text: str | None = None) -> str:
     """Update a note's title and text, or a checklist's title. Use item tools for checklist text."""
     keep, note = _get_note_or_raise(note_id)
@@ -286,6 +295,7 @@ def update_note(note_id: str, title: str | None = None, text: str | None = None)
 
 
 @mcp.tool()
+@keep_operation
 def set_note_color(note_id: str, color: str) -> str:
     """Set a note color. Valid values: DEFAULT (white), RED, ORANGE, YELLOW, GREEN, TEAL, BLUE, CERULEAN (dark blue), PURPLE, PINK, BROWN, GRAY."""
     keep, note = _get_note_or_raise(note_id)
@@ -301,6 +311,7 @@ def set_note_color(note_id: str, color: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def pin_note(note_id: str, pinned: bool = True) -> str:
     """Pin or unpin a note."""
     keep, note = _get_note_or_raise(note_id)
@@ -312,6 +323,7 @@ def pin_note(note_id: str, pinned: bool = True) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def archive_note(note_id: str, archived: bool = True) -> str:
     """Archive or unarchive a note."""
     keep, note = _get_note_or_raise(note_id)
@@ -323,6 +335,7 @@ def archive_note(note_id: str, archived: bool = True) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def trash_note(note_id: str) -> str:
     """Move a note to trash."""
     keep, note = _get_note_or_raise(note_id)
@@ -334,6 +347,7 @@ def trash_note(note_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def restore_note(note_id: str) -> str:
     """Restore a trashed/deleted note."""
     keep, note = _get_note_or_raise(note_id)
@@ -346,6 +360,7 @@ def restore_note(note_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def delete_note(note_id: str) -> str:
     """Delete a note (mark for deletion)."""
     keep, note = _get_note_or_raise(note_id)
@@ -357,6 +372,7 @@ def delete_note(note_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def list_labels() -> str:
     """List all labels."""
     keep = get_client()
@@ -364,6 +380,7 @@ def list_labels() -> str:
 
 
 @mcp.tool()
+@keep_operation
 def create_label(name: str) -> str:
     """Create a label."""
     keep = get_client()
@@ -373,6 +390,7 @@ def create_label(name: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def delete_label(label_id: str) -> str:
     """Delete a label by ID."""
     keep = get_client()
@@ -401,6 +419,7 @@ def delete_label(label_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def add_label_to_note(note_id: str, label_id: str) -> str:
     """Add a label to a note."""
     keep, note = _get_note_or_raise(note_id)
@@ -416,6 +435,7 @@ def add_label_to_note(note_id: str, label_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def remove_label_from_note(note_id: str, label_id: str) -> str:
     """Remove a label from a note."""
     keep, note = _get_note_or_raise(note_id)
@@ -436,6 +456,7 @@ def remove_label_from_note(note_id: str, label_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def list_note_collaborators(note_id: str) -> str:
     """List collaborator emails for a note."""
     _, note = _get_note_or_raise(note_id)
@@ -443,6 +464,7 @@ def list_note_collaborators(note_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def add_note_collaborator(note_id: str, email: str) -> str:
     """Add a collaborator email to a note."""
     keep, note = _get_note_or_raise(note_id)
@@ -454,6 +476,7 @@ def add_note_collaborator(note_id: str, email: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def remove_note_collaborator(note_id: str, email: str) -> str:
     """Remove a collaborator email from a note."""
     keep, note = _get_note_or_raise(note_id)
@@ -465,6 +488,7 @@ def remove_note_collaborator(note_id: str, email: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def list_note_media(note_id: str) -> str:
     """List note media blobs and direct media links when available."""
     keep, note = _get_note_or_raise(note_id)
@@ -483,6 +507,7 @@ def list_note_media(note_id: str) -> str:
 
 
 @mcp.tool()
+@keep_operation
 def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> str:
     """Download a note's media (images, drawings, audio) to a local directory.
 
