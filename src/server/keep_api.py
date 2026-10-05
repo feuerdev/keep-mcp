@@ -12,6 +12,14 @@ _keep_client = None
 _client_lock = RLock()
 
 
+def credential_configuration():
+    """Read local configuration without connecting or returning credential values."""
+    load_dotenv()
+    missing = [name for name in ('GOOGLE_EMAIL', 'GOOGLE_MASTER_TOKEN')
+               if not (os.getenv(name) or '').strip()]
+    return {'missing': missing, 'write_mode': 'unsafe' if is_unsafe_mode() else 'label_guarded'}
+
+
 def keep_operation(func):
     """Serialize access to the shared Keep tree, including mutation and sync."""
     @wraps(func)
@@ -20,6 +28,30 @@ def keep_operation(func):
         with _client_lock:
             try:
                 return func(*args, **kwargs)
+            except requests.exceptions.JSONDecodeError:
+                _keep_client = None
+                raise RuntimeError(
+                    "Google Keep returned a non-JSON response. Check network/API access; "
+                    "no operation was automatically retried."
+                ) from None
+            except requests.RequestException:
+                _keep_client = None
+                raise requests.ConnectionError(
+                    "Google Keep network request failed. Check connectivity, then read "
+                    "the authoritative note state before retrying a write; its remote outcome may be unknown."
+                ) from None
+            except gkeepapi.exception.LoginException:
+                _keep_client = None
+                raise RuntimeError(
+                    "Google Keep login failed. Verify GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN "
+                    "locally using the documented authentication flow."
+                ) from None
+            except (gkeepapi.exception.APIException, gkeepapi.exception.SyncException):
+                _keep_client = None
+                raise RuntimeError(
+                    "Google Keep sync/API failed. Check account and API access, then read "
+                    "the authoritative note state before retrying a write; its remote outcome may be unknown."
+                ) from None
             except Exception:
                 # A failed operation can leave unsaved or prematurely cleaned
                 # mutations in memory. Reload remote state on the next call.
@@ -43,36 +75,13 @@ def get_client():
         _keep_client.sync()
         return _keep_client
     
-    # Load environment variables
-    load_dotenv()
-    
-    # Get credentials from environment variables
-    email = os.getenv('GOOGLE_EMAIL')
-    master_token = os.getenv('GOOGLE_MASTER_TOKEN')
-    
-    if not email or not master_token:
-        raise ValueError("Missing Google Keep credentials. Please set GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN environment variables.")
-    
-    # Initialize the Keep API
+    configuration = credential_configuration()
+    if configuration['missing']:
+        raise ValueError("Missing Google Keep credentials: " + ', '.join(configuration['missing']))
+
     keep = gkeepapi.Keep()
-    
-    # Authenticate
-    try:
-        keep.authenticate(email, master_token)
-    except requests.exceptions.JSONDecodeError as exc:
-        raise RuntimeError(
-            "Google Keep API returned a non-JSON response during authentication. "
-            "This usually means the unofficial Keep API (notes/v1) is inaccessible "
-            "from this environment (HTTP 403/4xx). "
-            "Check that your GOOGLE_MASTER_TOKEN is valid and that the Keep API "
-            "is reachable from this network."
-        ) from exc
-    except gkeepapi.exception.LoginException as exc:
-        raise RuntimeError(
-            f"Google Keep login failed: {exc}. "
-            "Verify that GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN are correct."
-        ) from exc
-    
+    keep.authenticate(os.getenv('GOOGLE_EMAIL'), os.getenv('GOOGLE_MASTER_TOKEN'))
+
     # Store the client for reuse
     _keep_client = keep
     

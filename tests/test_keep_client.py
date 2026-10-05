@@ -19,10 +19,10 @@ def test_get_client_authenticates_and_caches(monkeypatch):
     created = DummyKeep()
 
     monkeypatch.setattr(keep_api, "load_dotenv", lambda: None)
-    monkeypatch.setattr(keep_api.os, "getenv", lambda key: {
+    monkeypatch.setattr(keep_api.os, "getenv", lambda key, default=None: {
         "GOOGLE_EMAIL": "user@example.com",
         "GOOGLE_MASTER_TOKEN": "token",
-    }.get(key))
+    }.get(key, default))
     monkeypatch.setattr(keep_api.gkeepapi, "Keep", lambda: created)
 
     first = keep_api.get_client()
@@ -36,7 +36,7 @@ def test_get_client_authenticates_and_caches(monkeypatch):
 def test_get_client_raises_when_missing_credentials(monkeypatch):
     keep_api._keep_client = None
     monkeypatch.setattr(keep_api, "load_dotenv", lambda: None)
-    monkeypatch.setattr(keep_api.os, "getenv", lambda _key: None)
+    monkeypatch.setattr(keep_api.os, "getenv", lambda _key, default=None: default)
 
     try:
         keep_api.get_client()
@@ -182,7 +182,7 @@ def test_failed_write_does_not_leave_phantom_state_for_next_read(monkeypatch, re
     monkeypatch.setattr(fresh, 'authenticate', lambda *args: fresh.restore(remote_state))
     monkeypatch.setattr(keep_api.gkeepapi, 'Keep', lambda: fresh)
 
-    with pytest.raises(requests.ConnectionError, match='Injected connection failure'):
+    with pytest.raises(requests.ConnectionError, match='network request failed'):
         cli.update_note(note.id, title='Uncommitted title')
 
     assert any(node.get('title') == 'Uncommitted title' for node in requests_sent[1])

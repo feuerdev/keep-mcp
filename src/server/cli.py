@@ -3,10 +3,12 @@ MCP plugin for Google Keep integration.
 Provides tools for interacting with Google Keep notes through MCP.
 """
 
+import argparse
 import json
 import os
 import re
 from datetime import datetime, timezone
+from importlib.metadata import version
 from itertools import islice
 from typing import Any
 
@@ -20,6 +22,7 @@ except ImportError:  # MCP SDK 1.x: FastMCP became MCPServer in 2.0
 from .keep_api import (
     KEEP_MCP_LABEL,
     can_modify_note,
+    credential_configuration,
     fetch_blob_bytes,
     get_client,
     has_keep_mcp_label,
@@ -545,9 +548,24 @@ def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> s
     return json.dumps(saved)
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Local Google Keep MCP server")
+    parser.add_argument('--check-config', action='store_true',
+                        help='Report redacted local configuration and versions without contacting Google')
+    args = parser.parse_args(argv)
+    if args.check_config:
+        config = credential_configuration()
+        print(json.dumps({
+            'status': 'configuration_error' if config['missing'] else 'configured',
+            'credential_source': 'environment_or_local_dotenv',
+            **config,
+            'versions': {name: version(name) for name in ('keep-mcp', 'gkeepapi', 'mcp')},
+            'connection_tested': False,
+        }))
+        return 1 if config['missing'] else 0
     mcp.run(transport="stdio")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

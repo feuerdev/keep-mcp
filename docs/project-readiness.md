@@ -1,6 +1,6 @@
 # keep-mcp: reliable local integration and portfolio release
 
-Status: proposed implementation spec, 5 October 2026. This cleanup does not implement the roadmap. Primary endpoint: a dependable local MCP integration plus an evidence-backed portfolio case study. Secondary endpoint: validate paid integration/setup help; no hosted consumer-account service is planned.
+Status: proposed implementation spec, 5 October 2026. This cleanup does not implement the roadmap. Primary endpoint: a dependable local MCP integration plus an evidence-backed portfolio case study. Keep remains free and open source. There is no paid setup/support experiment and no hosted consumer-account service.
 
 ## Existing system and cleanup
 
@@ -12,7 +12,7 @@ Cleanup corrects the README's safety scope, adds an honest project-status sectio
 
 A Google Keep user who already uses an MCP-capable desktop/CLI client wants to find notes and manage a dedicated assistant checklist without silently altering unrelated notes. First-run success means install → initialize/list tools → find → create a disposable checklist → update checked state → confirm actual Keep state → cleanup, with no credential in logs.
 
-Non-goals: hosted token custody, team admin/CASB product, full multi-account sync, replacing Keep, or claiming an official Google consumer API integration. The [official Keep API](https://developers.google.com/workspace/keep/api/guides) addresses enterprise administration; [gkeepapi](https://gkeepapi.readthedocs.io/en/latest/) is unofficial. A local setup service is a business hypothesis, not a reliability guarantee for Google's private endpoints.
+Non-goals: hosted token custody, team admin/CASB product, full multi-account sync, replacing Keep, or claiming an official Google consumer API integration. The [official Keep API](https://developers.google.com/workspace/keep/api/guides) addresses enterprise administration; [gkeepapi](https://gkeepapi.readthedocs.io/en/latest/) is unofficial. Users run the server on their own computer and keep their Google credentials there. Local operation still needs internet access for Google sync. The chosen AI client may send retrieved note content to its model provider; local MCP operation does not make that entire workflow local.
 
 ## Required behavior and technical design
 
@@ -36,12 +36,16 @@ Model-facing tool results should remain documented JSON with stable IDs/field ty
 
 Dependencies: Python 3.10+; supported MCP client; dedicated test Google account and credentials supplied through an authorized local setup. These are not required for documentation cleanup or mocked unit checks. No live-account smoke test was authorized through supplied credentials in this review.
 
-## Portfolio and paid validation gates
+## Open-source completion gates
 
-Portfolio-ready: reproducible install, current CI, one real end-to-end checklist scenario plus guarded negative case, annotated architecture and factual limits. Avoid star-ranking claims unless separately rechecked against competitors.
+First milestone: a fresh installed package initializes in a real MCP client, then creates, reads, checks and cleans up a disposable checklist in a dedicated account. Record actual client/server/dependency versions and independent Google Keep evidence. Cover guarded denial, authentication diagnosis, failed sync and deliberate retry without automatic mutation replay. Until that evidence exists, installation and mocked tests are partial evidence only.
 
-Commercial experiment: interview five active users about setup failures, desired workflows and paid support; require at least two explicit requests for a paid setup pilot before building billing or a hosted service. Try a fixed-scope local integration engagement first. Suggested EUR 49–99 pilot pricing is an experiment, not market evidence. Track install success/time, repeated workflow use and support minutes without collecting note contents. Halt paid expansion if reliable auth requires ongoing hands-on token repair or support costs exceed what customers accept.
+Success measures: fresh-install completion/time, reliable recurring workflows, actionable redacted errors, supported-version evidence, useful documentation, issues resolved and community contributions. Do not collect note contents for metrics. Keep all capabilities free and open source; billing, paid setup/support and hosted credential custody are outside the roadmap. A factual case study explains serialization, write boundaries and the unofficial-API tradeoff.
 
 ## Verification and rollout
 
 Run `make test`, `make lint`, the README coverage command and a fresh package-install/MCP initialization check. Feature/fix PRs require real MCP transcripts and actual Keep screenshots under CONTRIBUTING.md; keep them draft until evidence exists. Live tests use disposable fixtures, record identifiers for cleanup, and never commit account state. Changes land in small PRs; do not merge or publish during this planning task. Roll back runtime changes with a revert and the last verified package version.
+
+## Implemented offline onboarding foundation
+
+`--check-config` validates credential presence without network calls and reports redacted version/write-mode metadata. Authentication, network, non-JSON and sync/API exceptions suppress provider payloads and chained tracebacks. Failed operations discard the cached client without automatic mutation retry. Eight previously failing real-code fixtures now pass; full tests/coverage/lint and fresh-wheel discovery are separate receipts. Dedicated-account/client/screenshots and dependency-matrix evidence remain required release gates.

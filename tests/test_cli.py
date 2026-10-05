@@ -459,5 +459,5 @@ def test_main_runs_stdio_transport(monkeypatch):
         captured["transport"] = transport
 
     monkeypatch.setattr(cli.mcp, "run", fake_run)
-    cli.main()
+    cli.main([])
     assert captured["transport"] == "stdio"

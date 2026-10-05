@@ -1,10 +1,10 @@
 # keep-mcp
 
-MCP server for Google Keep
+Free, open-source local MCP server for Google Keep
 
 ## Project status
 
-Packaged beta with unit tests and CI. It uses an unofficial Google Keep API through gkeepapi; Google account authentication and private endpoints can change. The server runs locally and reads account credentials from its environment.
+Packaged beta with unit tests and CI. It uses an unofficial Google Keep API through gkeepapi; Google account authentication and private endpoints can change. The server runs on your own computer and keeps Google credentials there. Google sync needs internet access. Your MCP client may send retrieved note content to its model provider; running this server locally does not make the whole AI workflow local.
 
 See [the continuation plan and release criteria](docs/project-readiness.md).
 
@@ -292,3 +292,11 @@ Notes:
 ## Troubleshooting
 
 * If you get "DeviceManagementRequiredOrSyncDisabled" check https://admin.google.com/ac/devices/settings/general and turn "Turn off mobile management (Unmanaged)"
+
+## First-run diagnosis and reliability
+
+After installation, run `keep-mcp --check-config` (or `python -m server --check-config` in a checkout). This offline command reports whether required fields are present, installed package versions and label-guarded/unsafe mode. It never prints credential values or contacts Google. Exit0 means configured, not authenticated; exit1 means missing/blank credentials. Default startup still uses MCP stdio.
+
+Authentication failures have a login-specific message, network failures report connectivity, and non-JSON/sync/API failures identify upstream access problems. Provider exception bodies are suppressed to keep credentials and private response text out of messages and tracebacks. A failed write is never automatically retried: the remote commit may have succeeded even when the response failed. Read the note after reconnect before deciding whether to retry; a new client reloads authoritative state instead of replaying dirty mutations.
+
+For a dedicated-account checklist acceptance recipe and supported-version evidence, see [onboarding](docs/onboarding.md). Real client/Keep screenshots are still required before a feature/fix PR leaves draft. Keep MCP stays free; billing, paid setup/support and a hosted account-token service are outside this roadmap.
