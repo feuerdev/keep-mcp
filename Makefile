@@ -5,7 +5,7 @@ UV_CACHE_DIR ?= /tmp/uv-cache
 PYTHON_VERSION ?= 3.11
 VENV_PYTHON := .venv/bin/python
 UV_RUN := UV_CACHE_DIR=$(UV_CACHE_DIR) $(UV) run --no-sync --python $(VENV_PYTHON)
-DEV_TOOLS := pytest ruff
+DEV_TOOLS := pytest pytest-cov ruff
 
 .PHONY: install start test smoke lint check-venv
 

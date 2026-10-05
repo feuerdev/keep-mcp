@@ -2,6 +2,12 @@
 
 MCP server for Google Keep
 
+## Project status
+
+Packaged beta with unit tests and CI. It uses an unofficial Google Keep API through gkeepapi; Google account authentication and private endpoints can change. The server runs locally and reads account credentials from its environment.
+
+See [the continuation plan and release criteria](docs/project-readiness.md).
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and required visual evidence.
 
 ![keep-mcp](https://github.com/user-attachments/assets/f50c4ae6-4d35-4bb6-a494-51c67385f1b6)
@@ -95,7 +101,11 @@ Older instructions may ask for your Google password or an app password and call 
 * `list_note_media`: List media blobs for a note (with media links)
 * `download_media`: Download a note's media (images, drawings, audio) to a local directory through the authenticated session (the raw media links answer 403 to plain HTTP clients)
 
-By default, all destructive and modification operations are restricted to notes that have were created by the MCP server (i.e. have the keep-mcp label). Set `UNSAFE_MODE` to `true` to bypass this restriction.
+By default, guarded note writes require the `keep-mcp` label. Notes and checklists created by the server receive this label automatically. An existing note with this label is also writable: the label is an allowlist, not proof that the server created the note.
+
+This guard does not limit reads. Label creation acts on the account; label deletion has separate checks to protect the guard label and labels used by unlabelled notes. `download_media` writes to the requested local directory. Review the tool being called rather than treating safe mode as an account-wide sandbox.
+
+Set `UNSAFE_MODE` to `true` to bypass the note-write guard and related label protections.
 
 ```
 "env": {
@@ -145,6 +155,12 @@ Run locally:
 
 ```bash
 make test
+```
+
+To reproduce the CI coverage check after `make install`:
+
+```bash
+.venv/bin/python -m pytest -q --cov=src/server --cov-report=term-missing --cov-fail-under=70
 ```
 
 ### Smoke test against a real Keep account

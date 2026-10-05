@@ -55,3 +55,6 @@ htmlcov/
 
 # Local real-use evidence, including private raw observations
 testing-evidence/
+
+# Local recovery checkpoints
+/artifacts/
