@@ -11,10 +11,17 @@ try:
 except ImportError:
     from src.server.web import create_app, run_server
 
-app = create_app()
+default_transport = os.getenv("MCP_TRANSPORT", os.getenv("TRANSPORT", "sse")).lower()
+app = create_app(transport=default_transport)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run keep-mcp HTTP/SSE server")
+    parser.add_argument(
+        "--transport",
+        choices=["sse", "streamable-http", "http", "web"],
+        default=default_transport,
+        help="Transport type (sse, streamable-http, default: sse)",
+    )
     parser.add_argument(
         "--host",
         default=os.getenv("HOST", "0.0.0.0"),
@@ -33,4 +40,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    run_server(host=args.host, port=args.port, log_level=args.log_level)
+    web_transport = "streamable-http" if args.transport == "streamable-http" else "sse"
+    run_server(host=args.host, port=args.port, log_level=args.log_level, transport=web_transport)

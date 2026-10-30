@@ -279,8 +279,9 @@ You can run `keep-mcp` over an HTTP port using Server-Sent Events (SSE), suitabl
 
 ### Command Line
 ```bash
-# Using the CLI flag
+# Using the CLI flag (supports sse or streamable-http)
 keep-mcp --transport sse --port 8080
+keep-mcp --transport streamable-http --port 8080
 
 # Or using the dedicated entrypoint
 keep-mcp-web --port 8080
@@ -292,7 +293,7 @@ python app.py --port 8080
 ### Environment Variables
 * `PORT`: HTTP port to bind (default: `8080`).
 * `HOST`: Host interface to bind (default: `0.0.0.0`).
-* `TRANSPORT`: Set to `sse` or `http` to enable web mode.
+* `MCP_TRANSPORT` (or `TRANSPORT`): Set to `sse`, `streamable-http`, or `http` to enable web mode. Defaults to `stdio` when running `keep-mcp` or `python -m server`.
 * `MCP_API_KEY`: (Optional) Secret key to require for all MCP endpoints. Pass via `Authorization: Bearer <key>` header, `X-API-Key: <key>` header, or `?token=<key>` query parameter. Health checks on `/` and `/healthz` remain unauthenticated.
 
 ## Troubleshooting

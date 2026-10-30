@@ -78,9 +78,9 @@ class ApiKeyAuthMiddleware:
         await self.app(scope, receive, send)
 
 
-def create_app(api_key: str | None = None) -> ASGIApp:
+def create_app(api_key: str | None = None, transport: str = "sse") -> ASGIApp:
     """
-    Construct the ASGI application for SSE / HTTP MCP transport with health checks
+    Construct the ASGI application for SSE / Streamable HTTP MCP transport with health checks
     and optional API key authentication.
     """
     if api_key is None:
@@ -92,19 +92,32 @@ def create_app(api_key: str | None = None) -> ASGIApp:
         from mcp.server.transport_security import TransportSecuritySettings
 
         security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
-        base_app = mcp.sse_app(transport_security=security)
     except Exception:
-        try:
-            base_app = mcp.sse_app(host="0.0.0.0")
-        except TypeError:
-            base_app = mcp.sse_app()
+        security = None
+
+    if transport == "streamable-http":
+        if security is not None:
+            base_app = mcp.streamable_http_app(transport_security=security)
+        else:
+            try:
+                base_app = mcp.streamable_http_app(host="0.0.0.0")
+            except TypeError:
+                base_app = mcp.streamable_http_app()
+    else:
+        if security is not None:
+            base_app = mcp.sse_app(transport_security=security)
+        else:
+            try:
+                base_app = mcp.sse_app(host="0.0.0.0")
+            except TypeError:
+                base_app = mcp.sse_app()
 
     return ApiKeyAuthMiddleware(base_app, api_key=api_key)
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8080, log_level: str = "info"):
+def run_server(host: str = "0.0.0.0", port: int = 8080, log_level: str = "info", transport: str = "sse"):
     """Run the web server with uvicorn."""
-    app = create_app()
+    app = create_app(transport=transport)
     uvicorn.run(app, host=host, port=port, log_level=log_level)
 
 

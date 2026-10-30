@@ -548,12 +548,14 @@ def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> s
 def main():
     import argparse
 
+    default_transport = os.getenv("MCP_TRANSPORT", os.getenv("TRANSPORT", "stdio")).lower()
+
     parser = argparse.ArgumentParser(description="Google Keep MCP server")
     parser.add_argument(
         "--transport",
-        choices=["stdio", "sse", "http", "web"],
-        default=os.getenv("TRANSPORT", "stdio").lower(),
-        help="Transport type (stdio or sse/http/web, default: stdio)",
+        choices=["stdio", "sse", "streamable-http", "http", "web"],
+        default=default_transport,
+        help="Transport type (stdio, sse, streamable-http, http, or web; default: stdio)",
     )
     parser.add_argument(
         "--host",
@@ -569,10 +571,11 @@ def main():
 
     args, _ = parser.parse_known_args()
 
-    if args.transport in ("sse", "http", "web"):
+    if args.transport in ("sse", "streamable-http", "http", "web"):
         from .web import run_server
 
-        run_server(host=args.host, port=args.port)
+        web_transport = "streamable-http" if args.transport == "streamable-http" else "sse"
+        run_server(host=args.host, port=args.port, transport=web_transport)
     else:
         mcp.run(transport="stdio")
 
