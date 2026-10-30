@@ -273,6 +273,28 @@ Notes:
 * Restart your MCP client after updating config files.
 * `UNSAFE_MODE` is optional; keep it `"false"` unless you explicitly want to modify non-`keep-mcp` notes.
 
+## Running over HTTP / SSE (Web Transport)
+
+You can run `keep-mcp` over an HTTP port using Server-Sent Events (SSE), suitable for Docker, Cloud Run, or remote hosting:
+
+### Command Line
+```bash
+# Using the CLI flag
+keep-mcp --transport sse --port 8080
+
+# Or using the dedicated entrypoint
+keep-mcp-web --port 8080
+
+# Or running the ASGI entrypoint directly
+python app.py --port 8080
+```
+
+### Environment Variables
+* `PORT`: HTTP port to bind (default: `8080`).
+* `HOST`: Host interface to bind (default: `0.0.0.0`).
+* `TRANSPORT`: Set to `sse` or `http` to enable web mode.
+* `MCP_API_KEY`: (Optional) Secret key to require for all MCP endpoints. Pass via `Authorization: Bearer <key>` header, `X-API-Key: <key>` header, or `?token=<key>` query parameter. Health checks on `/` and `/healthz` remain unauthenticated.
+
 ## Troubleshooting
 
 * If you get "DeviceManagementRequiredOrSyncDisabled" check https://admin.google.com/ac/devices/settings/general and turn "Turn off mobile management (Unmanaged)"

@@ -546,7 +546,35 @@ def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> s
 
 
 def main():
-    mcp.run(transport="stdio")
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Google Keep MCP server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse", "http", "web"],
+        default=os.getenv("TRANSPORT", "stdio").lower(),
+        help="Transport type (stdio or sse/http/web, default: stdio)",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("HOST", "0.0.0.0"),
+        help="Host address for HTTP/SSE transport (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("PORT", "8080")),
+        help="Port for HTTP/SSE transport (default: 8080)",
+    )
+
+    args, _ = parser.parse_known_args()
+
+    if args.transport in ("sse", "http", "web"):
+        from .web import run_server
+
+        run_server(host=args.host, port=args.port)
+    else:
+        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
