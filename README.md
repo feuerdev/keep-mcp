@@ -83,7 +83,7 @@ Older instructions may ask for your Google password or an app password and call 
 ## Features
 
 ### Query and read tools
-* `find`: Search notes (case-insensitive by default) with optional filters for labels, colors, pinned, archived, trashed, creation/update date ranges (ISO 8601, UTC), and a result limit
+* `find`: Search notes (case-insensitive by default) with optional filters for labels, colors, pinned, archived, trashed, creation/update date ranges (ISO 8601, UTC), and a result limit (default 50)
 * `get_note`: Get a single note by ID
 
 ### Creation and update tools

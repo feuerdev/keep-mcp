@@ -121,7 +121,7 @@ def find(
     created_before: str | None = None,
     updated_after: str | None = None,
     updated_before: str | None = None,
-    limit: int | None = None,
+    limit: int | None = 50,
 ) -> list[dict[str, Any]]:
     """Find notes using text and optional filters.
 
@@ -129,7 +129,8 @@ def find(
     is true. labels should be label IDs. The date bounds accept ISO 8601 dates or
     datetimes, interpreted as UTC when no timezone is given (e.g. 2026-07-29
     or 2026-07-29T12:00:00Z); after-bounds are inclusive, before-bounds
-    exclusive. limit caps the number of returned notes.
+    exclusive. limit caps the number of returned notes (default 50, null
+    returns all).
     """
     keep = get_client()
 
