@@ -5,6 +5,7 @@ from threading import RLock
 import gkeepapi
 import requests
 from dotenv import load_dotenv
+from mcp.server.mcpserver.exceptions import ToolError
 
 KEEP_MCP_LABEL = "keep-mcp"
 
@@ -20,6 +21,8 @@ def keep_operation(func):
         with _client_lock:
             try:
                 return func(*args, **kwargs)
+            except ToolError:
+                raise
             except Exception:
                 # A failed operation can leave unsaved or prematurely cleaned
                 # mutations in memory. Reload remote state on the next call.
@@ -51,7 +54,7 @@ def get_client():
     master_token = os.getenv('GOOGLE_MASTER_TOKEN')
     
     if not email or not master_token:
-        raise ValueError("Missing Google Keep credentials. Please set GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN environment variables.")
+        raise ToolError("Missing Google Keep credentials. Please set GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN environment variables.")
     
     # Initialize the Keep API
     keep = gkeepapi.Keep()
@@ -60,7 +63,7 @@ def get_client():
     try:
         keep.authenticate(email, master_token)
     except requests.exceptions.JSONDecodeError as exc:
-        raise RuntimeError(
+        raise ToolError(
             "Google Keep API returned a non-JSON response during authentication. "
             "This usually means the unofficial Keep API (notes/v1) is inaccessible "
             "from this environment (HTTP 403/4xx). "
@@ -68,7 +71,7 @@ def get_client():
             "is reachable from this network."
         ) from exc
     except gkeepapi.exception.LoginException as exc:
-        raise RuntimeError(
+        raise ToolError(
             f"Google Keep login failed: {exc}. "
             "Verify that GOOGLE_EMAIL and GOOGLE_MASTER_TOKEN are correct."
         ) from exc

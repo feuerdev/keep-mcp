@@ -3,7 +3,9 @@ import re
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+import anyio
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError
 
 from server import cli
 
@@ -253,7 +255,7 @@ def test_find_date_filter_func(keep):
 
 
 def test_find_invalid_date_raises(keep):
-    with pytest.raises(ValueError, match="created_after"):
+    with pytest.raises(ToolError, match="created_after"):
         cli.find(created_after="not-a-date")
 
 
@@ -268,7 +270,7 @@ def test_find_invalid_color_raises(keep, monkeypatch):
         raise ValueError("bad")
 
     monkeypatch.setattr(cli.gkeepapi.node, "ColorValue", bad_color)
-    with pytest.raises(ValueError, match="Invalid color 'invalid'"):
+    with pytest.raises(ToolError, match="Invalid color 'invalid'"):
         cli.find(colors=["invalid"])
 
 
@@ -310,8 +312,13 @@ def test_update_note_updates_fields(keep):
     assert data["text"] == "changed"
 
 
+def test_anticipated_errors_reach_the_client(keep):
+    with pytest.raises(ToolError, match="Note with ID missing not found"):
+        anyio.run(cli.mcp.call_tool, "get_note", {"note_id": "missing"})
+
+
 def test_update_note_not_found_raises(keep):
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(ToolError, match="not found"):
         cli.update_note("missing", title="x")
 
 
@@ -325,12 +332,12 @@ def test_list_item_roundtrip(keep):
 
 
 def test_update_list_item_missing_item_raises(keep):
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(ToolError, match="not found"):
         cli.update_list_item("list1", "missing", text="x")
 
 
 def test_delete_list_item_paths(keep):
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(ToolError, match="not found"):
         cli.delete_list_item("list1", "missing")
 
     new_item_id = json.loads(cli.add_list_item("list1", "task"))["item_id"]
@@ -339,11 +346,11 @@ def test_delete_list_item_paths(keep):
 
 
 def test_list_item_requires_list_type(keep):
-    with pytest.raises(TypeError, match="not a list"):
+    with pytest.raises(ToolError, match="not a list"):
         cli.add_list_item("n1", "x")
-    with pytest.raises(TypeError, match="not a list"):
+    with pytest.raises(ToolError, match="not a list"):
         cli.update_list_item("n1", "i1", text="x")
-    with pytest.raises(TypeError, match="not a list"):
+    with pytest.raises(ToolError, match="not a list"):
         cli.delete_list_item("n1", "i1")
 
 
@@ -352,7 +359,7 @@ def test_set_note_color_validates(keep, monkeypatch):
         raise ValueError("bad")
 
     monkeypatch.setattr(cli.gkeepapi.node, "ColorValue", bad_color)
-    with pytest.raises(ValueError, match="Invalid color"):
+    with pytest.raises(ToolError, match="Invalid color"):
         cli.set_note_color("n1", "invalid")
 
 
@@ -378,17 +385,17 @@ def test_label_crud_and_missing_label_errors(keep):
     message = json.loads(cli.delete_label(created["id"]))
     assert "marked for deletion" in message["message"]
 
-    with pytest.raises(ValueError, match="Label with ID bad not found"):
+    with pytest.raises(ToolError, match="Label with ID bad not found"):
         cli.delete_label("bad")
-    with pytest.raises(ValueError, match="Label with ID bad not found"):
+    with pytest.raises(ToolError, match="Label with ID bad not found"):
         cli.add_label_to_note("n1", "bad")
-    with pytest.raises(ValueError, match="Label with ID bad not found"):
+    with pytest.raises(ToolError, match="Label with ID bad not found"):
         cli.remove_label_from_note("n1", "bad")
 
 
 def test_delete_label_safe_mode_guards(keep, monkeypatch):
     # Deleting the keep-mcp label is blocked in safe mode.
-    with pytest.raises(ValueError, match="keep-mcp"):
+    with pytest.raises(ToolError, match="keep-mcp"):
         cli.delete_label("l1")
 
     # Deleting a label that is on an unmanaged note is also blocked in safe mode.
@@ -397,7 +404,7 @@ def test_delete_label_safe_mode_guards(keep, monkeypatch):
     keep._labels["shared"] = shared
     unmanaged.labels.add(shared)
     keep.notes["unmanaged"] = unmanaged
-    with pytest.raises(ValueError, match="unmanaged"):
+    with pytest.raises(ToolError, match="unmanaged"):
         cli.delete_label("shared")
 
     # UNSAFE_MODE bypasses both guards.
@@ -441,14 +448,14 @@ def test_download_media_writes_files(keep, monkeypatch, tmp_path):
 
 
 def test_download_media_unknown_blob(keep, tmp_path):
-    with pytest.raises(ValueError, match="Blob with ID nope not found"):
+    with pytest.raises(ToolError, match="Blob with ID nope not found"):
         cli.download_media("n1", str(tmp_path), blob_id="nope")
 
 
 def test_modification_guard_blocks_when_unlabeled(keep, monkeypatch):
     keep.notes["n1"].labels = DummyLabels()
     monkeypatch.setattr(cli, "can_modify_note", lambda _: False)
-    with pytest.raises(ValueError, match="cannot be modified"):
+    with pytest.raises(ToolError, match="cannot be modified"):
         cli.update_note("n1", title="x")
 
 
