@@ -4,7 +4,6 @@ Provides tools for interacting with Google Keep notes through MCP.
 """
 
 import argparse
-import json
 import os
 import re
 from datetime import datetime, timezone
@@ -14,6 +13,7 @@ from typing import Any
 import gkeepapi
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
+from mcp.types import ToolAnnotations
 
 from .keep_api import (
     KEEP_MCP_LABEL,
@@ -29,6 +29,9 @@ from .keep_api import (
 )
 
 mcp = MCPServer("keep")
+
+READ_ONLY = ToolAnnotations(readOnlyHint=True)
+ADDITIVE = ToolAnnotations(destructiveHint=False)
 
 
 def _get_note_or_raise(note_id: str):
@@ -106,7 +109,7 @@ def _build_time_filter(
     return within
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 @keep_operation
 def find(
     query: str = "",
@@ -121,7 +124,7 @@ def find(
     updated_after: str | None = None,
     updated_before: str | None = None,
     limit: int | None = None,
-) -> str:
+) -> list[dict[str, Any]]:
     """Find notes using text and optional filters.
 
     query matches title and text, case-insensitively unless case_sensitive
@@ -158,20 +161,20 @@ def find(
         notes = islice(notes, max(limit, 0))
 
     notes_data = [serialize_note(note) for note in notes]
-    return json.dumps(notes_data)
+    return notes_data
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 @keep_operation
-def get_note(note_id: str) -> str:
+def get_note(note_id: str) -> dict[str, Any]:
     """Get a note by ID."""
     _, note = _get_note_or_raise(note_id)
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ADDITIVE)
 @keep_operation
-def create_note(title: str | None = None, text: str | None = None) -> str:
+def create_note(title: str | None = None, text: str | None = None) -> dict[str, Any]:
     """Create a new note with title and text."""
     keep = get_client()
     note = keep.createNote(title=title, text=text)
@@ -183,12 +186,12 @@ def create_note(title: str | None = None, text: str | None = None) -> str:
     note.labels.add(label)
     keep.sync()
 
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ADDITIVE)
 @keep_operation
-def create_list(title: str | None = None, items: list[dict[str, Any]] | None = None) -> str:
+def create_list(title: str | None = None, items: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """
     Create a new checklist note.
 
@@ -213,12 +216,12 @@ def create_list(title: str | None = None, items: list[dict[str, Any]] | None = N
     note.labels.add(label)
 
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
-@mcp.tool()
+@mcp.tool(annotations=ADDITIVE)
 @keep_operation
-def add_list_item(note_id: str, text: str, checked: bool = False) -> str:
+def add_list_item(note_id: str, text: str, checked: bool = False) -> dict[str, Any]:
     """Add an item to a checklist note."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
@@ -228,12 +231,12 @@ def add_list_item(note_id: str, text: str, checked: bool = False) -> str:
 
     item = note.add(text=text, checked=checked)
     keep.sync()
-    return json.dumps({"note_id": note.id, "item_id": item.id})
+    return {"note_id": note.id, "item_id": item.id}
 
 
 @mcp.tool()
 @keep_operation
-def update_list_item(note_id: str, item_id: str, text: str | None = None, checked: bool | None = None) -> str:
+def update_list_item(note_id: str, item_id: str, text: str | None = None, checked: bool | None = None) -> dict[str, Any]:
     """Update checklist item text and/or checked state."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
@@ -251,12 +254,12 @@ def update_list_item(note_id: str, item_id: str, text: str | None = None, checke
         item.checked = checked
 
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def delete_list_item(note_id: str, item_id: str) -> str:
+def delete_list_item(note_id: str, item_id: str) -> dict[str, Any]:
     """Delete a checklist item."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
@@ -270,12 +273,12 @@ def delete_list_item(note_id: str, item_id: str) -> str:
 
     item.delete()
     keep.sync()
-    return json.dumps({"message": f"List item {item_id} marked for deletion"})
+    return {"message": f"List item {item_id} marked for deletion"}
 
 
 @mcp.tool()
 @keep_operation
-def update_note(note_id: str, title: str | None = None, text: str | None = None) -> str:
+def update_note(note_id: str, title: str | None = None, text: str | None = None) -> dict[str, Any]:
     """Update a note's title and text, or a checklist's title. Use item tools for checklist text."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
@@ -289,12 +292,12 @@ def update_note(note_id: str, title: str | None = None, text: str | None = None)
         note.text = text
 
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def set_note_color(note_id: str, color: str) -> str:
+def set_note_color(note_id: str, color: str) -> dict[str, Any]:
     """Set a note color. Valid values: DEFAULT (white), RED, ORANGE, YELLOW, GREEN, TEAL, BLUE, CERULEAN (dark blue), PURPLE, PINK, BROWN, GRAY."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
@@ -305,48 +308,48 @@ def set_note_color(note_id: str, color: str) -> str:
         raise ToolError(f"Invalid color '{color}'") from exc
 
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def pin_note(note_id: str, pinned: bool = True) -> str:
+def pin_note(note_id: str, pinned: bool = True) -> dict[str, Any]:
     """Pin or unpin a note."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
 
     note.pinned = pinned
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def archive_note(note_id: str, archived: bool = True) -> str:
+def archive_note(note_id: str, archived: bool = True) -> dict[str, Any]:
     """Archive or unarchive a note."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
 
     note.archived = archived
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def trash_note(note_id: str) -> str:
+def trash_note(note_id: str) -> dict[str, Any]:
     """Move a note to trash."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
 
     note.trash()
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def restore_note(note_id: str) -> str:
+def restore_note(note_id: str) -> dict[str, Any]:
     """Restore a trashed/deleted note."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
@@ -354,42 +357,42 @@ def restore_note(note_id: str) -> str:
     note.untrash()
     note.undelete()
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def delete_note(note_id: str) -> str:
+def delete_note(note_id: str) -> dict[str, Any]:
     """Delete a note (mark for deletion)."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
 
     note.delete()
     keep.sync()
-    return json.dumps({"message": f"Note {note_id} marked for deletion"})
+    return {"message": f"Note {note_id} marked for deletion"}
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 @keep_operation
-def list_labels() -> str:
+def list_labels() -> list[dict[str, Any]]:
     """List all labels."""
     keep = get_client()
-    return json.dumps([serialize_label(label) for label in keep.labels()])
+    return [serialize_label(label) for label in keep.labels()]
 
 
-@mcp.tool()
+@mcp.tool(annotations=ADDITIVE)
 @keep_operation
-def create_label(name: str) -> str:
+def create_label(name: str) -> dict[str, Any]:
     """Create a label."""
     keep = get_client()
     label = keep.createLabel(name)
     keep.sync()
-    return json.dumps(serialize_label(label))
+    return serialize_label(label)
 
 
 @mcp.tool()
 @keep_operation
-def delete_label(label_id: str) -> str:
+def delete_label(label_id: str) -> dict[str, Any]:
     """Delete a label by ID."""
     keep = get_client()
     label = keep.getLabel(label_id)
@@ -413,12 +416,12 @@ def delete_label(label_id: str) -> str:
             )
     keep.deleteLabel(label_id)
     keep.sync()
-    return json.dumps({"message": f"Label {label_id} marked for deletion"})
+    return {"message": f"Label {label_id} marked for deletion"}
 
 
-@mcp.tool()
+@mcp.tool(annotations=ADDITIVE)
 @keep_operation
-def add_label_to_note(note_id: str, label_id: str) -> str:
+def add_label_to_note(note_id: str, label_id: str) -> dict[str, Any]:
     """Add a label to a note."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
@@ -429,12 +432,12 @@ def add_label_to_note(note_id: str, label_id: str) -> str:
 
     note.labels.add(label)
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def remove_label_from_note(note_id: str, label_id: str) -> str:
+def remove_label_from_note(note_id: str, label_id: str) -> dict[str, Any]:
     """Remove a label from a note."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
@@ -450,44 +453,44 @@ def remove_label_from_note(note_id: str, label_id: str) -> str:
 
     note.labels.remove(label)
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 @keep_operation
-def list_note_collaborators(note_id: str) -> str:
+def list_note_collaborators(note_id: str) -> list[str]:
     """List collaborator emails for a note."""
     _, note = _get_note_or_raise(note_id)
-    return json.dumps(list(note.collaborators.all()))
+    return list(note.collaborators.all())
 
 
 @mcp.tool()
 @keep_operation
-def add_note_collaborator(note_id: str, email: str) -> str:
+def add_note_collaborator(note_id: str, email: str) -> dict[str, Any]:
     """Add a collaborator email to a note."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
 
     note.collaborators.add(email)
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
 @mcp.tool()
 @keep_operation
-def remove_note_collaborator(note_id: str, email: str) -> str:
+def remove_note_collaborator(note_id: str, email: str) -> dict[str, Any]:
     """Remove a collaborator email from a note."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
 
     note.collaborators.remove(email)
     keep.sync()
-    return json.dumps(serialize_note(note))
+    return serialize_note(note)
 
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY)
 @keep_operation
-def list_note_media(note_id: str) -> str:
+def list_note_media(note_id: str) -> list[dict[str, Any]]:
     """List note media blobs and direct media links when available."""
     keep, note = _get_note_or_raise(note_id)
 
@@ -501,12 +504,12 @@ def list_note_media(note_id: str) -> str:
             }
         )
 
-    return json.dumps(media)
+    return media
 
 
 @mcp.tool()
 @keep_operation
-def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> str:
+def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> list[dict[str, Any]]:
     """Download a note's media (images, drawings, audio) to a local directory.
 
     The links from list_note_media require Google authentication and answer
@@ -540,7 +543,7 @@ def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> s
             }
         )
 
-    return json.dumps(saved)
+    return saved
 
 
 def main():

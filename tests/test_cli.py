@@ -1,4 +1,3 @@
-import json
 import re
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -196,8 +195,7 @@ def keep(monkeypatch):
 
 
 def test_find_forwards_filters(keep):
-    result = json.loads(
-        cli.find(
+    result = cli.find(
             query="q",
             labels=["l1"],
             colors=["red"],
@@ -205,7 +203,6 @@ def test_find_forwards_filters(keep):
             archived=False,
             trashed=False,
         )
-    )
     assert keep.last_find_kwargs["query"].pattern == "q"
     assert keep.last_find_kwargs["labels"] == ["l1"]
     assert [color.value for color in keep.last_find_kwargs["colors"]] == ["red"]
@@ -260,9 +257,9 @@ def test_find_invalid_date_raises(keep):
 
 
 def test_find_limit_caps_results(keep):
-    assert len(json.loads(cli.find())) == 2
-    assert len(json.loads(cli.find(limit=1))) == 1
-    assert json.loads(cli.find(limit=0)) == []
+    assert len(cli.find()) == 2
+    assert len(cli.find(limit=1)) == 1
+    assert cli.find(limit=0) == []
 
 
 def test_find_invalid_color_raises(keep, monkeypatch):
@@ -275,39 +272,37 @@ def test_find_invalid_color_raises(keep, monkeypatch):
 
 
 def test_get_note(keep):
-    data = json.loads(cli.get_note("n1"))
+    data = cli.get_note("n1")
     assert data["id"] == "n1"
 
 
 def test_create_note_labels_and_sync(keep):
-    data = json.loads(cli.create_note("t", "body"))
+    data = cli.create_note("t", "body")
     assert data["id"] == "created"
     assert keep.sync_calls == 1
 
 
 def test_create_note_creates_label_when_missing(keep):
     keep._labels = {}
-    data = json.loads(cli.create_note("t", "body"))
+    data = cli.create_note("t", "body")
     assert data["labels"][0]["name"] == "keep-mcp"
 
 
 def test_create_list_variants(keep):
-    data = json.loads(cli.create_list("list"))
+    data = cli.create_list("list")
     assert data["id"] == "created_list"
-    data_with_items = json.loads(
-        cli.create_list("list", items=[{"text": "a", "checked": True}])
-    )
+    data_with_items = cli.create_list("list", items=[{"text": "a", "checked": True}])
     assert data_with_items["items"][0]["checked"] is True
 
 
 def test_create_list_creates_label_when_missing(keep):
     keep._labels = {}
-    data = json.loads(cli.create_list("list"))
+    data = cli.create_list("list")
     assert data["labels"][0]["name"] == "keep-mcp"
 
 
 def test_update_note_updates_fields(keep):
-    data = json.loads(cli.update_note("n1", title="new", text="changed"))
+    data = cli.update_note("n1", title="new", text="changed")
     assert data["title"] == "new"
     assert data["text"] == "changed"
 
@@ -317,17 +312,20 @@ def test_anticipated_errors_reach_the_client(keep):
         anyio.run(cli.mcp.call_tool, "get_note", {"note_id": "missing"})
 
 
+def test_tools_return_structured_content(keep):
+    result = anyio.run(cli.mcp.call_tool, "get_note", {"note_id": "n1"})
+    assert result.structured_content["id"] == "n1"
+
+
 def test_update_note_not_found_raises(keep):
     with pytest.raises(ToolError, match="not found"):
         cli.update_note("missing", title="x")
 
 
 def test_list_item_roundtrip(keep):
-    add = json.loads(cli.add_list_item("list1", "task", checked=True))
+    add = cli.add_list_item("list1", "task", checked=True)
     item_id = add["item_id"]
-    updated = json.loads(
-        cli.update_list_item("list1", item_id, text="task2", checked=False)
-    )
+    updated = cli.update_list_item("list1", item_id, text="task2", checked=False)
     assert any(item["id"] == item_id for item in updated["items"])
 
 
@@ -340,8 +338,8 @@ def test_delete_list_item_paths(keep):
     with pytest.raises(ToolError, match="not found"):
         cli.delete_list_item("list1", "missing")
 
-    new_item_id = json.loads(cli.add_list_item("list1", "task"))["item_id"]
-    data = json.loads(cli.delete_list_item("list1", new_item_id))
+    new_item_id = cli.add_list_item("list1", "task")["item_id"]
+    data = cli.delete_list_item("list1", new_item_id)
     assert "marked for deletion" in data["message"]
 
 
@@ -364,25 +362,25 @@ def test_set_note_color_validates(keep, monkeypatch):
 
 
 def test_note_state_transitions(keep):
-    assert json.loads(cli.set_note_color("n1", "red"))["color"] == "red"
-    assert json.loads(cli.pin_note("n1", True))["pinned"] is True
-    assert json.loads(cli.archive_note("n1", True))["archived"] is True
-    assert json.loads(cli.trash_note("n1"))["trashed"] is True
-    assert json.loads(cli.restore_note("n1"))["trashed"] is False
+    assert cli.set_note_color("n1", "red")["color"] == "red"
+    assert cli.pin_note("n1", True)["pinned"] is True
+    assert cli.archive_note("n1", True)["archived"] is True
+    assert cli.trash_note("n1")["trashed"] is True
+    assert cli.restore_note("n1")["trashed"] is False
 
 
 def test_delete_note_marks_deleted(keep):
-    msg = json.loads(cli.delete_note("n1"))
+    msg = cli.delete_note("n1")
     assert "marked for deletion" in msg["message"]
 
 
 def test_label_crud_and_missing_label_errors(keep):
-    labels = json.loads(cli.list_labels())
+    labels = cli.list_labels()
     assert labels
 
-    created = json.loads(cli.create_label("other"))
+    created = cli.create_label("other")
     assert created["name"] == "other"
-    message = json.loads(cli.delete_label(created["id"]))
+    message = cli.delete_label(created["id"])
     assert "marked for deletion" in message["message"]
 
     with pytest.raises(ToolError, match="Label with ID bad not found"):
@@ -409,36 +407,36 @@ def test_delete_label_safe_mode_guards(keep, monkeypatch):
 
     # UNSAFE_MODE bypasses both guards.
     monkeypatch.setenv("UNSAFE_MODE", "true")
-    msg = json.loads(cli.delete_label("shared"))
+    msg = cli.delete_label("shared")
     assert "marked for deletion" in msg["message"]
 
 
 def test_label_add_remove(keep):
     keep._labels["l2"] = DummyLabel("l2", "other")
-    add = json.loads(cli.add_label_to_note("n1", "l2"))
+    add = cli.add_label_to_note("n1", "l2")
     assert any(label["id"] == "l2" for label in add["labels"])
-    remove = json.loads(cli.remove_label_from_note("n1", "l2"))
+    remove = cli.remove_label_from_note("n1", "l2")
     assert all(label["id"] != "l2" for label in remove["labels"])
 
 
 def test_collaborator_list_add_remove(keep):
-    before = json.loads(cli.list_note_collaborators("n1"))
+    before = cli.list_note_collaborators("n1")
     assert before == []
 
-    data = json.loads(cli.add_note_collaborator("n1", "user@example.com"))
+    data = cli.add_note_collaborator("n1", "user@example.com")
     assert "user@example.com" in data["collaborators"]
-    after = json.loads(cli.remove_note_collaborator("n1", "user@example.com"))
+    after = cli.remove_note_collaborator("n1", "user@example.com")
     assert "user@example.com" not in after["collaborators"]
 
 
 def test_list_note_media(keep):
-    media = json.loads(cli.list_note_media("n1"))
+    media = cli.list_note_media("n1")
     assert media[0]["media_link"].startswith("https://media/")
 
 
 def test_download_media_writes_files(keep, monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "fetch_blob_bytes", lambda k, b: (b"png-bytes", "image/png"))
-    saved = json.loads(cli.download_media("n1", str(tmp_path)))
+    saved = cli.download_media("n1", str(tmp_path))
     assert saved[0]["blob_id"] == "b1"
     assert saved[0]["type"] == "IMAGE"
     assert saved[0]["path"].endswith("b1.png")

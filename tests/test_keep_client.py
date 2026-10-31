@@ -154,7 +154,6 @@ def test_tools_do_not_overlap_access_to_shared_state(monkeypatch):
 
 @pytest.mark.parametrize("remote_committed", [False, True])
 def test_failed_write_does_not_leave_phantom_state_for_next_read(monkeypatch, remote_committed):
-    import json
 
     import gkeepapi
     import requests
@@ -196,5 +195,5 @@ def test_failed_write_does_not_leave_phantom_state_for_next_read(monkeypatch, re
         cli.update_note(note.id, title='Uncommitted title')
 
     assert any(node.get('title') == 'Uncommitted title' for node in requests_sent[1])
-    result = json.loads(cli.get_note(note.id))
+    result = cli.get_note(note.id)
     assert result['title'] == ('Uncommitted title' if remote_committed else 'Original title')
