@@ -52,12 +52,29 @@ Or with `uvx`:
 
 `keep-mcp` uses [gkeepapi](https://gkeepapi.readthedocs.io/), which connects to Google Keep through an unofficial private API. A Google master token has full access to your account. Treat it like a password and never commit or share it.
 
-Use the browser-assisted token exchange documented by `gpsoauth`. Choose how you want to run the exchange:
+You need [uv](https://docs.astral.sh/uv/getting-started/installation/) and a desktop browser.
 
-* **Local Python:** Follow [`gpsoauth`'s alternative flow](https://github.com/simon-weber/gpsoauth#alternative-flow).
-* **Docker:** Follow [gkeepapi's "Obtaining a Master Token" instructions](https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token). This runs the same exchange without requiring a local Python installation.
+1. Open https://accounts.google.com/EmbeddedSetup and sign in with the Google account you use for Keep.
+2. Click **I agree**. The page may keep loading forever. Leave it open and continue.
+3. Copy the `oauth_token` cookie:
+   * **Chrome or Edge:** Press F12, open the **Application** tab, then **Cookies** → `https://accounts.google.com`.
+   * **Firefox:** Press F12, open the **Storage** tab, then **Cookies** → `https://accounts.google.com`.
 
-Both options require the browser `oauth_token` described in the `gpsoauth` documentation.
+   Find the row named `oauth_token` and copy its value. It starts with `oauth2_4/`.
+4. Right away, run this in a terminal and paste your email and the cookie value when asked:
+
+   ```bash
+   uv run --no-project --with gpsoauth python -c "import gpsoauth; r = gpsoauth.exchange_token(input('Email: '), input('oauth_token: '), '0123456789abcdef'); print(r.get('Token', r))"
+   ```
+
+5. The command prints your master token. It starts with `aas_et/`. Use it as `GOOGLE_MASTER_TOKEN`.
+
+If it prints an error such as `BadAuthentication` instead, the cookie has expired. Repeat steps 1 to 4 to get a fresh one.
+
+#### More details
+
+* [`gpsoauth`'s alternative flow](https://github.com/simon-weber/gpsoauth#alternative-flow) describes the token exchange.
+* [gkeepapi's "Obtaining a Master Token" instructions](https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token) run the same exchange with Docker.
 
 Older instructions may ask for your Google password or an app password and call `perform_master_login()`. That flow is unreliable and can return `BadAuthentication`. Use the browser-assisted flow above instead.
 
