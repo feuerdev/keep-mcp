@@ -273,28 +273,20 @@ Notes:
 * Restart your MCP client after updating config files.
 * `UNSAFE_MODE` is optional; keep it `"false"` unless you explicitly want to modify non-`keep-mcp` notes.
 
-## Running over HTTP / SSE (Web Transport)
+## Running over Streamable HTTP
 
-You can run `keep-mcp` over an HTTP port using Server-Sent Events (SSE), suitable for Docker, Cloud Run, or remote hosting:
+`keep-mcp` supports the MCP Streamable HTTP transport (`/mcp` endpoint) in addition to the default `stdio` transport:
 
-### Command Line
 ```bash
-# Using the CLI flag (supports sse or streamable-http)
-keep-mcp --transport sse --port 8080
-keep-mcp --transport streamable-http --port 8080
+# Start Streamable HTTP server on localhost (default: 127.0.0.1:8000)
+keep-mcp --transport streamable-http
 
-# Or using the dedicated entrypoint
-keep-mcp-web --port 8080
-
-# Or running the ASGI entrypoint directly
-python app.py --port 8080
+# Customize host or port
+keep-mcp --transport streamable-http --host 127.0.0.1 --port 8000
 ```
 
-### Environment Variables
-* `PORT`: HTTP port to bind (default: `8080`).
-* `HOST`: Host interface to bind (default: `0.0.0.0`).
-* `MCP_TRANSPORT` (or `TRANSPORT`): Set to `sse`, `streamable-http`, or `http` to enable web mode. Defaults to `stdio` when running `keep-mcp` or `python -m server`.
-* `MCP_API_KEY`: (Optional) Secret key to require for all MCP endpoints. Pass via `Authorization: Bearer <key>` header, `X-API-Key: <key>` header, or `?token=<key>` query parameter. Health checks on `/` and `/healthz` remain unauthenticated.
+> [!NOTE]
+> `keep-mcp` binds to `127.0.0.1` by default with DNS rebinding protection enabled. To expose the server to remote or web clients (such as Gemini web), place an authenticating proxy (such as [mcp-auth-proxy](https://github.com/sigbit/mcp-auth-proxy)) in front of the server.
 
 ## Troubleshooting
 

@@ -248,7 +248,7 @@ def test_find_date_filter_func(keep):
     assert within(note_with(datetime(2026, 6, 15, tzinfo=utc), datetime(2026, 7, 20, tzinfo=utc))) is False
     assert within(note_with(datetime(2026, 7, 15, tzinfo=utc), datetime(2026, 8, 2, tzinfo=utc))) is False
     # Naive timestamps (older gkeepapi) are treated as UTC, not an error.
-    assert within(note_with(datetime(2026, 7, 15), datetime(2026, 7, 20))) is True  # noqa: DTZ001
+    assert within(note_with(datetime(2026, 7, 15), datetime(2026, 7, 20))) is True
     assert within(SimpleNamespace(timestamps=None)) is False
 
 
@@ -455,9 +455,29 @@ def test_modification_guard_blocks_when_unlabeled(keep, monkeypatch):
 def test_main_runs_stdio_transport(monkeypatch):
     captured = {}
 
-    def fake_run(*, transport):
-        captured["transport"] = transport
+    def fake_run(*args, **kwargs):
+        captured.update(kwargs)
+        captured["called"] = True
 
     monkeypatch.setattr(cli.mcp, "run", fake_run)
+    monkeypatch.setattr("sys.argv", ["keep-mcp"])
     cli.main()
-    assert captured["transport"] == "stdio"
+    assert captured.get("called") is True
+    assert captured.get("transport", "stdio") == "stdio"
+
+
+def test_main_runs_streamable_http_transport(monkeypatch):
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(cli.mcp, "run", fake_run)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["keep-mcp", "--transport", "streamable-http", "--host", "127.0.0.1", "--port", "9000"],
+    )
+    cli.main()
+    assert captured["transport"] == "streamable-http"
+    assert captured["host"] == "127.0.0.1"
+    assert captured["port"] == 9000

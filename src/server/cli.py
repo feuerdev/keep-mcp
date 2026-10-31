@@ -3,6 +3,7 @@ MCP plugin for Google Keep integration.
 Provides tools for interacting with Google Keep notes through MCP.
 """
 
+import argparse
 import json
 import os
 import re
@@ -546,38 +547,16 @@ def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> s
 
 
 def main():
-    import argparse
-
-    default_transport = os.getenv("MCP_TRANSPORT", os.getenv("TRANSPORT", "stdio")).lower()
-
     parser = argparse.ArgumentParser(description="Google Keep MCP server")
-    parser.add_argument(
-        "--transport",
-        choices=["stdio", "sse", "streamable-http", "http", "web"],
-        default=default_transport,
-        help="Transport type (stdio, sse, streamable-http, http, or web; default: stdio)",
-    )
-    parser.add_argument(
-        "--host",
-        default=os.getenv("HOST", "0.0.0.0"),
-        help="Host address for HTTP/SSE transport (default: 0.0.0.0)",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=int(os.getenv("PORT", "8080")),
-        help="Port for HTTP/SSE transport (default: 8080)",
-    )
+    parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
 
-    args, _ = parser.parse_known_args()
-
-    if args.transport in ("sse", "streamable-http", "http", "web"):
-        from .web import run_server
-
-        web_transport = "streamable-http" if args.transport == "streamable-http" else "sse"
-        run_server(host=args.host, port=args.port, transport=web_transport)
+    if args.transport == "stdio":
+        mcp.run()
     else:
-        mcp.run(transport="stdio")
+        mcp.run(transport="streamable-http", host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

@@ -9,8 +9,6 @@ dependencies = [
     "mcp[cli]>=1.2,<3",
     "python-dotenv>=1.0",
     "requests>=2.28",
-    "starlette>=0.38",
-    "uvicorn>=0.30",
 ]
 authors = [
     { name = "Jannik Feuerhahn", email = "jannik@feuer.dev" }
@@ -32,7 +30,6 @@ Repository = "https://github.com/feuerdev/keep-mcp"
 
 [project.scripts]
 keep-mcp = "server.cli:main"
-keep-mcp-web = "server.web:main"
 
 [build-system]
 requires = ["hatchling >= 1.26"]
