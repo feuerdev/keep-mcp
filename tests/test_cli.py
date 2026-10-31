@@ -262,6 +262,13 @@ def test_find_limit_caps_results(keep):
     assert cli.find(limit=0) == []
 
 
+def test_find_returns_50_notes_by_default(keep):
+    for i in range(60):
+        keep.notes[f"extra{i}"] = DummyNote(f"extra{i}")
+    assert len(cli.find()) == 50
+    assert len(cli.find(limit=None)) == 62
+
+
 def test_find_invalid_color_raises(keep):
     with pytest.raises(ToolError, match="colors"):
         anyio.run(cli.mcp.call_tool, "find", {"colors": ["invalid"]})
