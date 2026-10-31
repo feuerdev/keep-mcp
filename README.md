@@ -52,7 +52,7 @@ Or with `uvx`:
 
 `keep-mcp` uses [gkeepapi](https://gkeepapi.readthedocs.io/), which connects to Google Keep through an unofficial private API. A Google master token has full access to your account. Treat it like a password and never commit or share it.
 
-You need [uv](https://docs.astral.sh/uv/getting-started/installation/) and a desktop browser.
+You need [Docker](https://docs.docker.com/get-started/get-docker/) and a desktop browser.
 
 1. Open https://accounts.google.com/EmbeddedSetup and sign in with the Google account you use for Keep.
 2. Click **I agree**. The page may keep loading forever. Leave it open and continue.
@@ -64,8 +64,10 @@ You need [uv](https://docs.astral.sh/uv/getting-started/installation/) and a des
 4. Right away, run this in a terminal and paste your email and the cookie value when asked:
 
    ```bash
-   uv run --no-project --with gpsoauth python -c "import gpsoauth; r = gpsoauth.exchange_token(input('Email: '), input('oauth_token: '), '0123456789abcdef'); print(r.get('Token', r))"
+   docker run --rm -it ghcr.io/astral-sh/uv:python3.13-bookworm-slim uv run --no-project --with gpsoauth python -c "import gpsoauth; r = gpsoauth.exchange_token(input('Email: '), input('oauth_token: '), '0123456789abcdef'); print(r.get('Token', r))"
    ```
+
+   Without Docker, install [uv](https://docs.astral.sh/uv/getting-started/installation/) and run the same command without the `docker run --rm -it ghcr.io/astral-sh/uv:python3.13-bookworm-slim` part.
 
 5. The command prints your master token. It starts with `aas_et/`. Use it as `GOOGLE_MASTER_TOKEN`.
 
@@ -74,7 +76,7 @@ If it prints an error such as `BadAuthentication` instead, the cookie has expire
 #### More details
 
 * [`gpsoauth`'s alternative flow](https://github.com/simon-weber/gpsoauth#alternative-flow) describes the token exchange.
-* [gkeepapi's "Obtaining a Master Token" instructions](https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token) run the same exchange with Docker.
+* [gkeepapi's "Obtaining a Master Token" instructions](https://gkeepapi.readthedocs.io/en/latest/#obtaining-a-master-token) describe the same exchange.
 
 Older instructions may ask for your Google password or an app password and call `perform_master_login()`. That flow is unreliable and can return `BadAuthentication`. Use the browser-assisted flow above instead.
 
