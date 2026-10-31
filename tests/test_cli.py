@@ -262,13 +262,9 @@ def test_find_limit_caps_results(keep):
     assert cli.find(limit=0) == []
 
 
-def test_find_invalid_color_raises(keep, monkeypatch):
-    def bad_color(_):
-        raise ValueError("bad")
-
-    monkeypatch.setattr(cli.gkeepapi.node, "ColorValue", bad_color)
-    with pytest.raises(ToolError, match="Invalid color 'invalid'"):
-        cli.find(colors=["invalid"])
+def test_find_invalid_color_raises(keep):
+    with pytest.raises(ToolError, match="colors"):
+        anyio.run(cli.mcp.call_tool, "find", {"colors": ["invalid"]})
 
 
 def test_get_note(keep):
@@ -352,13 +348,9 @@ def test_list_item_requires_list_type(keep):
         cli.delete_list_item("n1", "i1")
 
 
-def test_set_note_color_validates(keep, monkeypatch):
-    def bad_color(_):
-        raise ValueError("bad")
-
-    monkeypatch.setattr(cli.gkeepapi.node, "ColorValue", bad_color)
-    with pytest.raises(ToolError, match="Invalid color"):
-        cli.set_note_color("n1", "invalid")
+def test_set_note_color_validates(keep):
+    with pytest.raises(ToolError, match="color"):
+        anyio.run(cli.mcp.call_tool, "set_note_color", {"note_id": "n1", "color": "invalid"})
 
 
 def test_note_state_transitions(keep):

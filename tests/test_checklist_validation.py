@@ -2,6 +2,7 @@
 
 from unittest.mock import Mock
 
+import anyio
 import gkeepapi
 import pytest
 from mcp.server.mcpserver.exceptions import ToolError
@@ -20,8 +21,8 @@ def offline_keep(monkeypatch):
 
 @pytest.mark.parametrize("checked", ["false", "true", 0, 1, None])
 def test_create_list_rejects_non_boolean_checked_without_creating_note(offline_keep, checked):
-    with pytest.raises(ToolError, match="checked.*boolean"):
-        cli.create_list("Tasks", [{"text": "Buy milk", "checked": checked}])
+    with pytest.raises(ToolError, match="checked"):
+        anyio.run(cli.mcp.call_tool, "create_list", {"title": "Tasks", "items": [{"text": "Buy milk", "checked": checked}]})
     assert list(offline_keep.all()) == []
     offline_keep.sync.assert_not_called()
 

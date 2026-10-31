@@ -8,12 +8,14 @@ import os
 import re
 from datetime import datetime, timezone
 from itertools import islice
-from typing import Any
+from typing import Any, Literal
 
 import gkeepapi
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
+from pydantic import StrictBool
+from typing_extensions import TypedDict
 
 from .keep_api import (
     KEEP_MCP_LABEL,
@@ -33,6 +35,16 @@ mcp = MCPServer("keep")
 READ_ONLY = ToolAnnotations(readOnlyHint=True)
 ADDITIVE = ToolAnnotations(destructiveHint=False)
 
+Color = Literal[
+    "DEFAULT", "RED", "ORANGE", "YELLOW", "GREEN", "TEAL",
+    "BLUE", "CERULEAN", "PURPLE", "PINK", "BROWN", "GRAY",
+]
+
+
+class ChecklistItem(TypedDict, total=False):
+    text: str
+    checked: StrictBool
+
 
 def _get_note_or_raise(note_id: str):
     keep = get_client()
@@ -48,20 +60,6 @@ def _ensure_modifiable(note):
             f"Note with ID {note.id} cannot be modified "
             "(missing keep-mcp label and UNSAFE_MODE is not enabled)"
         )
-
-
-def _normalize_colors(colors: list[str] | None):
-    if colors is None:
-        return None
-
-    normalized_colors = []
-    for color in colors:
-        try:
-            normalized_colors.append(gkeepapi.node.ColorValue(color))
-        except ValueError as exc:
-            raise ToolError(f"Invalid color '{color}'") from exc
-
-    return normalized_colors
 
 
 def _parse_utc(value: str | None, param: str) -> datetime | None:
@@ -114,7 +112,7 @@ def _build_time_filter(
 def find(
     query: str = "",
     labels: list[str] | None = None,
-    colors: list[str] | None = None,
+    colors: list[Color] | None = None,
     pinned: bool | None = None,
     archived: bool | None = False,
     trashed: bool = False,
@@ -128,14 +126,12 @@ def find(
     """Find notes using text and optional filters.
 
     query matches title and text, case-insensitively unless case_sensitive
-    is true. labels should be label IDs. colors should be ColorValue strings
-    (e.g. DEFAULT, RED, CERULEAN). The date bounds accept ISO 8601 dates or
+    is true. labels should be label IDs. The date bounds accept ISO 8601 dates or
     datetimes, interpreted as UTC when no timezone is given (e.g. 2026-07-29
     or 2026-07-29T12:00:00Z); after-bounds are inclusive, before-bounds
     exclusive. limit caps the number of returned notes.
     """
     keep = get_client()
-    normalized_colors = _normalize_colors(colors)
 
     search_query: str | re.Pattern = query
     if query and not case_sensitive:
@@ -152,7 +148,7 @@ def find(
         query=search_query,
         func=time_filter,
         labels=labels,
-        colors=normalized_colors,
+        colors=None if colors is None else [gkeepapi.node.ColorValue(color) for color in colors],
         pinned=pinned,
         archived=archived,
         trashed=trashed,
@@ -191,19 +187,11 @@ def create_note(title: str | None = None, text: str | None = None) -> dict[str, 
 
 @mcp.tool(annotations=ADDITIVE)
 @keep_operation
-def create_list(title: str | None = None, items: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    """
-    Create a new checklist note.
-
-    items should be objects like: {"text": "task", "checked": false}.
-    checked must be a boolean when supplied and defaults to false.
-    """
+def create_list(title: str | None = None, items: list[ChecklistItem] | None = None) -> dict[str, Any]:
+    """Create a new checklist note. An item's checked defaults to false."""
     keep = get_client()
     formatted_items = None
     if items:
-        for item in items:
-            if not isinstance(item.get("checked", False), bool):
-                raise ToolError("Each item's checked field must be a boolean")
         formatted_items = [
             (item.get("text", ""), item.get("checked", False)) for item in items
         ]
@@ -297,15 +285,12 @@ def update_note(note_id: str, title: str | None = None, text: str | None = None)
 
 @mcp.tool()
 @keep_operation
-def set_note_color(note_id: str, color: str) -> dict[str, Any]:
-    """Set a note color. Valid values: DEFAULT (white), RED, ORANGE, YELLOW, GREEN, TEAL, BLUE, CERULEAN (dark blue), PURPLE, PINK, BROWN, GRAY."""
+def set_note_color(note_id: str, color: Color) -> dict[str, Any]:
+    """Set a note color. DEFAULT is white, CERULEAN is dark blue."""
     keep, note = _get_note_or_raise(note_id)
     _ensure_modifiable(note)
 
-    try:
-        note.color = gkeepapi.node.ColorValue(color)
-    except ValueError as exc:
-        raise ToolError(f"Invalid color '{color}'") from exc
+    note.color = gkeepapi.node.ColorValue(color)
 
     keep.sync()
     return serialize_note(note)
