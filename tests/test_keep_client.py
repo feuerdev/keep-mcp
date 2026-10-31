@@ -1,4 +1,5 @@
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError
 
 from server import keep_api
 
@@ -38,12 +39,21 @@ def test_get_client_raises_when_missing_credentials(monkeypatch):
     monkeypatch.setattr(keep_api, "load_dotenv", lambda: None)
     monkeypatch.setattr(keep_api.os, "getenv", lambda _key: None)
 
-    try:
+    with pytest.raises(ToolError, match="Missing Google Keep credentials"):
         keep_api.get_client()
-    except ValueError as exc:
-        assert "Missing Google Keep credentials" in str(exc)
-    else:
-        raise AssertionError("Expected ValueError for missing credentials")
+
+
+def test_tool_error_keeps_the_client(monkeypatch):
+    client = object()
+    monkeypatch.setattr(keep_api, "_keep_client", client)
+
+    @keep_api.keep_operation
+    def reject():
+        raise ToolError("rejected")
+
+    with pytest.raises(ToolError):
+        reject()
+    assert keep_api._keep_client is client
 
 
 def test_cached_client_refreshes_external_changes(monkeypatch):

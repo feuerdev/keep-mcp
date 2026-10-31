@@ -13,6 +13,7 @@ from typing import Any
 
 import gkeepapi
 from mcp.server import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from .keep_api import (
     KEEP_MCP_LABEL,
@@ -34,13 +35,13 @@ def _get_note_or_raise(note_id: str):
     keep = get_client()
     note = keep.get(note_id)
     if not note:
-        raise ValueError(f"Note with ID {note_id} not found")
+        raise ToolError(f"Note with ID {note_id} not found")
     return keep, note
 
 
 def _ensure_modifiable(note):
     if not can_modify_note(note):
-        raise ValueError(
+        raise ToolError(
             f"Note with ID {note.id} cannot be modified "
             "(missing keep-mcp label and UNSAFE_MODE is not enabled)"
         )
@@ -55,7 +56,7 @@ def _normalize_colors(colors: list[str] | None):
         try:
             normalized_colors.append(gkeepapi.node.ColorValue(color))
         except ValueError as exc:
-            raise ValueError(f"Invalid color '{color}'") from exc
+            raise ToolError(f"Invalid color '{color}'") from exc
 
     return normalized_colors
 
@@ -66,7 +67,7 @@ def _parse_utc(value: str | None, param: str) -> datetime | None:
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise ValueError(
+        raise ToolError(
             f"Invalid {param} '{value}': expected ISO 8601, "
             "e.g. 2026-07-29 or 2026-07-29T12:00:00Z"
         ) from exc
@@ -199,7 +200,7 @@ def create_list(title: str | None = None, items: list[dict[str, Any]] | None = N
     if items:
         for item in items:
             if not isinstance(item.get("checked", False), bool):
-                raise TypeError("Each item's checked field must be a boolean")
+                raise ToolError("Each item's checked field must be a boolean")
         formatted_items = [
             (item.get("text", ""), item.get("checked", False)) for item in items
         ]
@@ -223,7 +224,7 @@ def add_list_item(note_id: str, text: str, checked: bool = False) -> str:
     _ensure_modifiable(note)
 
     if not isinstance(note, gkeepapi.node.List):
-        raise TypeError(f"Note with ID {note_id} is not a list")
+        raise ToolError(f"Note with ID {note_id} is not a list")
 
     item = note.add(text=text, checked=checked)
     keep.sync()
@@ -238,11 +239,11 @@ def update_list_item(note_id: str, item_id: str, text: str | None = None, checke
     _ensure_modifiable(note)
 
     if not isinstance(note, gkeepapi.node.List):
-        raise TypeError(f"Note with ID {note_id} is not a list")
+        raise ToolError(f"Note with ID {note_id} is not a list")
 
     item = note.get(item_id)
     if not item:
-        raise ValueError(f"List item with ID {item_id} not found")
+        raise ToolError(f"List item with ID {item_id} not found")
 
     if text is not None:
         item.text = text
@@ -261,11 +262,11 @@ def delete_list_item(note_id: str, item_id: str) -> str:
     _ensure_modifiable(note)
 
     if not isinstance(note, gkeepapi.node.List):
-        raise TypeError(f"Note with ID {note_id} is not a list")
+        raise ToolError(f"Note with ID {note_id} is not a list")
 
     item = note.get(item_id)
     if not item:
-        raise ValueError(f"List item with ID {item_id} not found")
+        raise ToolError(f"List item with ID {item_id} not found")
 
     item.delete()
     keep.sync()
@@ -280,7 +281,7 @@ def update_note(note_id: str, title: str | None = None, text: str | None = None)
     _ensure_modifiable(note)
 
     if text is not None and isinstance(note, gkeepapi.node.List):
-        raise ValueError("Cannot replace checklist text: use the checklist item tools")
+        raise ToolError("Cannot replace checklist text: use the checklist item tools")
 
     if title is not None:
         note.title = title
@@ -301,7 +302,7 @@ def set_note_color(note_id: str, color: str) -> str:
     try:
         note.color = gkeepapi.node.ColorValue(color)
     except ValueError as exc:
-        raise ValueError(f"Invalid color '{color}'") from exc
+        raise ToolError(f"Invalid color '{color}'") from exc
 
     keep.sync()
     return json.dumps(serialize_note(note))
@@ -393,10 +394,10 @@ def delete_label(label_id: str) -> str:
     keep = get_client()
     label = keep.getLabel(label_id)
     if not label:
-        raise ValueError(f"Label with ID {label_id} not found")
+        raise ToolError(f"Label with ID {label_id} not found")
     if not is_unsafe_mode():
         if label.name == KEEP_MCP_LABEL:
-            raise ValueError(
+            raise ToolError(
                 f"Cannot delete the '{KEEP_MCP_LABEL}' label in safe mode: all notes managed "
                 "by this server would become permanently unmodifiable. Set UNSAFE_MODE=true to override."
             )
@@ -405,7 +406,7 @@ def delete_label(label_id: str) -> str:
             if any(lb.id == label_id for lb in n.labels.all()) and not has_keep_mcp_label(n)
         ]
         if unmanaged:
-            raise ValueError(
+            raise ToolError(
                 f"Cannot delete label '{label.name}' in safe mode: it is attached to "
                 f"{len(unmanaged)} unmanaged note(s). Deleting it would silently modify "
                 "those notes. Set UNSAFE_MODE=true to override."
@@ -424,7 +425,7 @@ def add_label_to_note(note_id: str, label_id: str) -> str:
 
     label = keep.getLabel(label_id)
     if not label:
-        raise ValueError(f"Label with ID {label_id} not found")
+        raise ToolError(f"Label with ID {label_id} not found")
 
     note.labels.add(label)
     keep.sync()
@@ -440,9 +441,9 @@ def remove_label_from_note(note_id: str, label_id: str) -> str:
 
     label = keep.getLabel(label_id)
     if not label:
-        raise ValueError(f"Label with ID {label_id} not found")
+        raise ToolError(f"Label with ID {label_id} not found")
     if label.name == KEEP_MCP_LABEL and not is_unsafe_mode():
-        raise ValueError(
+        raise ToolError(
             f"Cannot remove the '{KEEP_MCP_LABEL}' label in safe mode: the note would "
             "become permanently unmodifiable. Set UNSAFE_MODE=true to override."
         )
@@ -519,7 +520,7 @@ def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> s
 
     blobs = [blob for blob in note.blobs if blob_id is None or blob.id == blob_id]
     if blob_id is not None and not blobs:
-        raise ValueError(f"Blob with ID {blob_id} not found on note {note_id}")
+        raise ToolError(f"Blob with ID {blob_id} not found on note {note_id}")
 
     os.makedirs(dest_dir, exist_ok=True)
 

@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import gkeepapi
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError
 
 from server import cli
 
@@ -20,7 +21,7 @@ def offline_keep(monkeypatch):
 
 @pytest.mark.parametrize("checked", ["false", "true", 0, 1, None])
 def test_create_list_rejects_non_boolean_checked_without_creating_note(offline_keep, checked):
-    with pytest.raises(TypeError, match="checked.*boolean"):
+    with pytest.raises(ToolError, match="checked.*boolean"):
         cli.create_list("Tasks", [{"text": "Buy milk", "checked": checked}])
     assert list(offline_keep.all()) == []
     offline_keep.sync.assert_not_called()
@@ -40,7 +41,7 @@ def test_create_list_preserves_boolean_checked_and_default(offline_keep):
 def test_update_list_text_does_not_partially_change_title(offline_keep):
     note = offline_keep.createList("Original", [("Buy milk", False)])
     note.labels.add(offline_keep.createLabel("keep-mcp"))
-    with pytest.raises(ValueError, match="checklist.*item"):
+    with pytest.raises(ToolError, match="checklist.*item"):
         cli.update_note(note.id, title="Changed", text="Replacement")
     assert note.title == "Original"
     assert [item.text for item in note.items] == ["Buy milk"]
