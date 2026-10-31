@@ -541,6 +541,7 @@ def main():
     if args.transport == "stdio":
         mcp.run()
     else:
+        mcp.remove_tool("download_media")
         mcp.run(transport="streamable-http", host=args.host, port=args.port)
 
 
