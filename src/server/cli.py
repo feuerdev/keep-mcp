@@ -3,6 +3,7 @@ MCP plugin for Google Keep integration.
 Provides tools for interacting with Google Keep notes through MCP.
 """
 
+import argparse
 import json
 import os
 import re
@@ -546,7 +547,16 @@ def download_media(note_id: str, dest_dir: str, blob_id: str | None = None) -> s
 
 
 def main():
-    mcp.run(transport="stdio")
+    parser = argparse.ArgumentParser(description="Google Keep MCP server")
+    parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
+
+    if args.transport == "stdio":
+        mcp.run()
+    else:
+        mcp.run(transport="streamable-http", host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

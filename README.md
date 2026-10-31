@@ -292,6 +292,21 @@ Notes:
 * Restart your MCP client after updating config files.
 * `UNSAFE_MODE` is optional; keep it `"false"` unless you explicitly want to modify non-`keep-mcp` notes.
 
+## Running over Streamable HTTP
+
+`keep-mcp` supports the MCP Streamable HTTP transport (`/mcp` endpoint) in addition to the default `stdio` transport:
+
+```bash
+# Start Streamable HTTP server on localhost (default: 127.0.0.1:8000)
+keep-mcp --transport streamable-http
+
+# Customize host or port
+keep-mcp --transport streamable-http --host 127.0.0.1 --port 8000
+```
+
+> [!NOTE]
+> `keep-mcp` binds to `127.0.0.1` by default with DNS rebinding protection enabled. To expose the server to remote or web clients (such as Gemini web), place an authenticating proxy (such as [mcp-auth-proxy](https://github.com/sigbit/mcp-auth-proxy)) in front of the server.
+
 ## Troubleshooting
 
 * If you get "DeviceManagementRequiredOrSyncDisabled" check https://admin.google.com/ac/devices/settings/general and turn "Turn off mobile management (Unmanaged)"

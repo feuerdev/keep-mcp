@@ -455,9 +455,29 @@ def test_modification_guard_blocks_when_unlabeled(keep, monkeypatch):
 def test_main_runs_stdio_transport(monkeypatch):
     captured = {}
 
-    def fake_run(*, transport):
-        captured["transport"] = transport
+    def fake_run(*args, **kwargs):
+        captured.update(kwargs)
+        captured["called"] = True
 
     monkeypatch.setattr(cli.mcp, "run", fake_run)
+    monkeypatch.setattr("sys.argv", ["keep-mcp"])
     cli.main()
-    assert captured["transport"] == "stdio"
+    assert captured.get("called") is True
+    assert captured.get("transport", "stdio") == "stdio"
+
+
+def test_main_runs_streamable_http_transport(monkeypatch):
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(cli.mcp, "run", fake_run)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["keep-mcp", "--transport", "streamable-http", "--host", "127.0.0.1", "--port", "9000"],
+    )
+    cli.main()
+    assert captured["transport"] == "streamable-http"
+    assert captured["host"] == "127.0.0.1"
+    assert captured["port"] == 9000
