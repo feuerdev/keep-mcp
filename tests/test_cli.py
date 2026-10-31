@@ -476,12 +476,15 @@ def test_main_runs_streamable_http_transport(monkeypatch):
     def fake_run(*args, **kwargs):
         captured.update(kwargs)
 
+    removed = []
     monkeypatch.setattr(cli.mcp, "run", fake_run)
+    monkeypatch.setattr(cli.mcp, "remove_tool", removed.append)
     monkeypatch.setattr(
         "sys.argv",
         ["keep-mcp", "--transport", "streamable-http", "--host", "127.0.0.1", "--port", "9000"],
     )
     cli.main()
+    assert removed == ["download_media"]
     assert captured["transport"] == "streamable-http"
     assert captured["host"] == "127.0.0.1"
     assert captured["port"] == 9000
