@@ -1,6 +1,5 @@
 """Exercise checklist validation with real gkeepapi objects, without network calls."""
 
-import json
 from unittest.mock import Mock
 
 import gkeepapi
@@ -28,11 +27,11 @@ def test_create_list_rejects_non_boolean_checked_without_creating_note(offline_k
 
 
 def test_create_list_preserves_boolean_checked_and_default(offline_keep):
-    result = json.loads(cli.create_list("Tasks", [
+    result = cli.create_list("Tasks", [
         {"text": "Unchecked", "checked": False},
         {"text": "Checked", "checked": True},
         {"text": "Default"},
-    ]))
+    ])
     assert {item["text"]: item["checked"] for item in result["items"]} == {
         "Unchecked": False, "Checked": True, "Default": False,
     }
@@ -51,6 +50,6 @@ def test_update_list_text_does_not_partially_change_title(offline_keep):
 def test_update_list_title_remains_supported(offline_keep):
     note = offline_keep.createList("Original", [("Buy milk", False)])
     note.labels.add(offline_keep.createLabel("keep-mcp"))
-    result = json.loads(cli.update_note(note.id, title="Changed"))
+    result = cli.update_note(note.id, title="Changed")
     assert result["title"] == "Changed"
     assert result["items"][0]["text"] == "Buy milk"
