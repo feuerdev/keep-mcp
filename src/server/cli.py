@@ -12,11 +12,7 @@ from itertools import islice
 from typing import Any
 
 import gkeepapi
-
-try:
-    from mcp.server import MCPServer
-except ImportError:  # MCP SDK 1.x: FastMCP became MCPServer in 2.0
-    from mcp.server.fastmcp import FastMCP as MCPServer
+from mcp.server import MCPServer
 
 from .keep_api import (
     KEEP_MCP_LABEL,
