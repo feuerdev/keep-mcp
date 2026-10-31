@@ -248,7 +248,7 @@ def test_find_date_filter_func(keep):
     assert within(note_with(datetime(2026, 6, 15, tzinfo=utc), datetime(2026, 7, 20, tzinfo=utc))) is False
     assert within(note_with(datetime(2026, 7, 15, tzinfo=utc), datetime(2026, 8, 2, tzinfo=utc))) is False
     # Naive timestamps (older gkeepapi) are treated as UTC, not an error.
-    assert within(note_with(datetime(2026, 7, 15), datetime(2026, 7, 20))) is True  # noqa: DTZ001
+    assert within(note_with(datetime(2026, 7, 15), datetime(2026, 7, 20))) is True
     assert within(SimpleNamespace(timestamps=None)) is False
 
 
