@@ -305,7 +305,7 @@ keep-mcp --transport streamable-http --host 127.0.0.1 --port 8000
 ```
 
 > [!NOTE]
-> `keep-mcp` binds to `127.0.0.1` by default with DNS rebinding protection enabled. To expose the server to remote or web clients (such as Gemini web), place an authenticating proxy (such as [mcp-auth-proxy](https://github.com/sigbit/mcp-auth-proxy)) in front of the server.
+> `keep-mcp` binds to `127.0.0.1` by default with DNS rebinding protection enabled. To expose the server to remote or web clients (such as Gemini web), place an authenticating proxy (such as [mcp-auth-proxy](https://github.com/sigbit/mcp-auth-proxy)) in front of the server. See the [Auth Proxy Deployment Example](docs/deployments/auth-proxy/README.md) for a ready-to-deploy reverse proxy setup on Fly.io, Render, and Cloud Run.
 
 ## Troubleshooting
 

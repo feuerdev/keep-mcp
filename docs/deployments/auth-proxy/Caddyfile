@@ -1,0 +1,30 @@
+# Global options
+{
+    admin off
+}
+
+# Bind to dynamic PORT environment variable (default 8080)
+:{$PORT:8080} {
+    # Public health check endpoint for platform probes
+    handle /healthz {
+        respond "Auth proxy healthy" 200
+    }
+
+    # Match authorized requests by Authorization header, X-API-Key, or query token
+    @authorized {
+        expression `{http.request.header.Authorization} == 'Bearer ' + '{$MCP_API_KEY}' || {http.request.header.X-Api-Key} == '{$MCP_API_KEY}' || {http.request.uri.query.token} == '{$MCP_API_KEY}'`
+    }
+
+    # Reverse proxy authorized traffic to backend MCP service
+    handle @authorized {
+        reverse_proxy {$BACKEND_URL:http://keep-mcp-backend.internal:8080} {
+            # Critical settings for Server-Sent Events (SSE) and streaming HTTP:
+            flush_interval -1
+        }
+    }
+
+    # Reject unauthorized requests with 401
+    handle {
+        respond "Unauthorized: Invalid or missing MCP API key" 401
+    }
+}

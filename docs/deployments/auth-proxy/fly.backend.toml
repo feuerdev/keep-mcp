@@ -1,0 +1,19 @@
+app = 'keep-mcp-backend'
+primary_region = 'sjc'
+
+[build]
+  dockerfile = 'Dockerfile'
+  ignorefile = '.dockerignore'
+
+[env]
+  PORT = '8080'
+  MCP_TRANSPORT = 'streamable-http'
+  UNSAFE_MODE = 'false'
+
+# Pure private machine - no public HTTP service or exposed public ports.
+# Accessible within private mesh at http://keep-mcp-backend.internal:8080.
+
+[vm]
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 512
