@@ -1,9 +1,6 @@
-# Auth Proxy Deployment Example (Caddy + SSE Reverse Proxy)
+# Auth Proxy Deployment Example (Caddy + Streamable HTTP Reverse Proxy)
 
-This directory contains configuration files and deployment templates for running a two-tier **Caddy Auth Proxy + keep-mcp** architecture on cloud container platforms:
-- **Fly.io** (isolated pair of VMs communicating over private 6PN mesh)
-- **Render** (Public Web Service + Private Service)
-- **Google Cloud Run** or **Docker Compose**
+This directory contains configuration files and deployment templates for running a two-tier **Caddy Auth Proxy + keep-mcp** architecture on **Fly.io** using an isolated pair of VMs communicating over a private 6PN WireGuard mesh.
 
 ---
 
@@ -17,7 +14,7 @@ MCP Clients (Gemini, Cursor, Claude, etc.)
     │       Caddy Auth Proxy           │
     │  - Port 8080 (Public)            │
     │  - Validates API Key             │
-    │  - Zero-buffering for SSE        │
+    │  - Zero-buffering for SSE/HTTP   │
     │  - Health probe on /healthz      │
     └──────────────────┬───────────────┘
                        │ Private Network / 6PN Mesh
@@ -34,7 +31,7 @@ MCP Clients (Gemini, Cursor, Claude, etc.)
 
 ## Features
 
-- **Unbuffered SSE & Streaming Delivery:** Configured with `flush_interval -1` to guarantee immediate, streaming response chunks for MCP Server-Sent Events (`sse`) and Streamable HTTP (`streamable-http`).
+- **Unbuffered Streaming Delivery:** Configured with `flush_interval -1` to guarantee immediate, streaming response chunks for MCP Server-Sent Events (`sse`) and Streamable HTTP (`streamable-http`).
 - **Flexible Key Ingestion:** Accepts authentication tokens through:
   - `Authorization: Bearer <MCP_API_KEY>`
   - `X-API-Key: <MCP_API_KEY>`
@@ -52,7 +49,7 @@ MCP Clients (Gemini, Cursor, Claude, etc.)
 | `BACKEND_URL` | Proxy | Address of internal `keep-mcp` service | `http://keep-mcp-backend.internal:8080` |
 | `GOOGLE_EMAIL` | Backend | Google account email address | *(Required)* |
 | `GOOGLE_MASTER_TOKEN` | Backend | Google Master Token (`aas_et/...`) | *(Required)* |
-| `MCP_TRANSPORT` | Backend | Transport type (`sse` or `streamable-http`) | `sse` |
+| `MCP_TRANSPORT` | Backend | Transport type (`streamable-http` or `sse`) | `streamable-http` |
 | `PORT` | Both | Port to listen on (assigned dynamically) | `8080` |
 
 ---
@@ -114,7 +111,7 @@ From the repo root:
 
 4. **Deploy the proxy:**
    ```bash
-   fly deploy --config docs/deployments/auth-proxy/fly.proxy.toml
+   fly deploy docs/deployments/auth-proxy --config docs/deployments/auth-proxy/fly.proxy.toml
    ```
 
 5. **Allocate public IPs for the gateway:**
@@ -130,16 +127,3 @@ https://<your-proxy-app-name>.fly.dev/mcp?token=<your-secret-api-key>
 Or via HTTP headers:
 - `Authorization: Bearer <your-secret-api-key>`
 - `X-API-Key: <your-secret-api-key>`
-
----
-
-## Deploying on Render
-
-1. **Backend as a Private Service:**
-   - In Render Dashboard, create a **Private Service** from the repo root using the root `Dockerfile`.
-   - Set `GOOGLE_EMAIL` and `GOOGLE_MASTER_TOKEN`.
-   - Note the internal service address (e.g. `http://keep-mcp:8080`).
-
-2. **Proxy as a Public Web Service:**
-   - Create a **Web Service** using `docs/deployments/auth-proxy/Dockerfile`.
-   - Set `MCP_API_KEY` and `BACKEND_URL=http://keep-mcp:8080`.
