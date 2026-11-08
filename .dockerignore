@@ -10,7 +10,6 @@ __pycache__
 *.pyo
 *.pyd
 .env*
-!.env.example
 .pytest_cache
 .coverage
 htmlcov
