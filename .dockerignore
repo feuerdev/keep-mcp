@@ -1,0 +1,16 @@
+.git
+.github
+.agents
+.cursor
+.venv
+venv
+ENV
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env*
+.pytest_cache
+.coverage
+htmlcov
+testing-evidence

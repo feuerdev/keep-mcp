@@ -37,3 +37,29 @@ jobs:
 
       - name: Bytecode sanity
         run: python -m compileall src
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t keep-mcp .
+
+      - name: Run container
+        run: docker run -d --name keep-mcp-test -p 8000:8000 keep-mcp
+
+      - name: Check container answers on /mcp
+        run: |
+          for i in {1..30}; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/mcp || true)
+            if [ "$status" != "000" ] && [ -n "$status" ]; then
+              echo "Container answered on /mcp with HTTP $status"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Container failed to respond on /mcp within 30s"
+          docker logs keep-mcp-test
+          exit 1

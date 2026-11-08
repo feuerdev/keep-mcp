@@ -307,6 +307,27 @@ keep-mcp --transport streamable-http --host 127.0.0.1 --port 8000
 > [!NOTE]
 > `keep-mcp` binds to `127.0.0.1` by default with DNS rebinding protection enabled. To expose the server to remote or web clients (such as Gemini web), place an authenticating proxy (such as [mcp-auth-proxy](https://github.com/sigbit/mcp-auth-proxy)) in front of the server.
 
+## Running in Docker
+
+A `Dockerfile` is provided for running `keep-mcp` as a containerized Streamable HTTP server listening on port 8000.
+
+1. Build the container image:
+   ```bash
+   docker build -t keep-mcp .
+   ```
+
+2. Run the container:
+   ```bash
+   docker run -d \
+     -e GOOGLE_EMAIL="you@example.com" \
+     -e GOOGLE_MASTER_TOKEN="aas_et/..." \
+     -p 127.0.0.1:8000:8000 \
+     keep-mcp
+   ```
+
+> [!WARNING]
+> The container has no built-in authentication. Publish it only to localhost (`-p 127.0.0.1:8000:8000`) or place it behind an authenticating reverse proxy if exposing it over a network.
+
 ## Troubleshooting
 
 * If you get "DeviceManagementRequiredOrSyncDisabled" check https://admin.google.com/ac/devices/settings/general and turn "Turn off mobile management (Unmanaged)"
