@@ -14,7 +14,7 @@ import gkeepapi
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
-from pydantic import ConfigDict, StrictBool, StrictInt, TypeAdapter, ValidationError
+from pydantic import ConfigDict, StrictBool, StrictInt
 from typing_extensions import Required, TypedDict
 
 from .keep_api import (
@@ -34,6 +34,7 @@ mcp = MCPServer("keep")
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True)
 ADDITIVE = ToolAnnotations(destructiveHint=False)
+DESTRUCTIVE = ToolAnnotations(destructiveHint=True)
 
 Color = Literal[
     "DEFAULT", "RED", "ORANGE", "YELLOW", "GREEN", "TEAL",
@@ -53,9 +54,6 @@ class ReplacementChecklistItem(TypedDict, total=False):
     checked: StrictBool
 
 
-_replacement_items = TypeAdapter(list[ReplacementChecklistItem])
-
-
 def _get_note_or_raise(note_id: str):
     keep = get_client()
     note = keep.get(note_id)
@@ -70,6 +68,14 @@ def _ensure_modifiable(note):
             f"Note with ID {note.id} cannot be modified "
             "(missing keep-mcp label and UNSAFE_MODE is not enabled)"
         )
+
+
+def _get_list_or_raise(note_id: str):
+    keep, note = _get_note_or_raise(note_id)
+    _ensure_modifiable(note)
+    if not isinstance(note, gkeepapi.node.List):
+        raise ToolError(f"Note with ID {note_id} is not a list")
+    return keep, note
 
 
 def _parse_utc(value: str | None, param: str) -> datetime | None:
@@ -222,11 +228,7 @@ def create_list(title: str | None = None, items: list[ChecklistItem] | None = No
 @keep_operation
 def add_list_item(note_id: str, text: str, checked: bool = False) -> dict[str, Any]:
     """Add an item to a checklist note."""
-    keep, note = _get_note_or_raise(note_id)
-    _ensure_modifiable(note)
-
-    if not isinstance(note, gkeepapi.node.List):
-        raise ToolError(f"Note with ID {note_id} is not a list")
+    keep, note = _get_list_or_raise(note_id)
 
     item = note.add(text=text, checked=checked)
     keep.sync()
@@ -237,11 +239,7 @@ def add_list_item(note_id: str, text: str, checked: bool = False) -> dict[str, A
 @keep_operation
 def update_list_item(note_id: str, item_id: str, text: str | None = None, checked: bool | None = None) -> dict[str, Any]:
     """Update checklist item text and/or checked state."""
-    keep, note = _get_note_or_raise(note_id)
-    _ensure_modifiable(note)
-
-    if not isinstance(note, gkeepapi.node.List):
-        raise ToolError(f"Note with ID {note_id} is not a list")
+    keep, note = _get_list_or_raise(note_id)
 
     item = note.get(item_id)
     if not item:
@@ -260,11 +258,7 @@ def update_list_item(note_id: str, item_id: str, text: str | None = None, checke
 @keep_operation
 def delete_list_item(note_id: str, item_id: str) -> dict[str, Any]:
     """Delete a checklist item."""
-    keep, note = _get_note_or_raise(note_id)
-    _ensure_modifiable(note)
-
-    if not isinstance(note, gkeepapi.node.List):
-        raise ToolError(f"Note with ID {note_id} is not a list")
+    keep, note = _get_list_or_raise(note_id)
 
     item = note.get(item_id)
     if not item:
@@ -276,86 +270,79 @@ def delete_list_item(note_id: str, item_id: str) -> dict[str, Any]:
 
 
 def _get_flat_list_or_raise(note_id: str):
-    keep, note = _get_note_or_raise(note_id)
-    _ensure_modifiable(note)
-    if not isinstance(note, gkeepapi.node.List):
-        raise ToolError(f"Note with ID {note_id} is not a list")
+    keep, note = _get_list_or_raise(note_id)
     items = note.items
     if any(item.parent_item is not None or item.super_list_item_id for item in items):
         raise ToolError("Indented checklists are not supported by ordering or replacement tools")
     return keep, note, items
 
 
-def _set_list_order(items):
-    # gkeepapi sorts descending. Use its spacing, with deterministic unique values
-    # rather than averaging neighbours (which can eventually exhaust the gap).
-    for index, item in enumerate(items):
-        item.sort = (len(items) - index) * gkeepapi.node.List.SORT_DELTA
+def _set_list_order(note: gkeepapi.node.List, item_ids: list[str]) -> bool:
+    """Apply a validated order, leaving unchanged lists clean."""
+    if item_ids == [item.id for item in note.items]:
+        return False
+    positions = {item_id: index for index, item_id in enumerate(item_ids)}
+    note.sort_items(key=lambda item: positions[item.id])
+    return True
 
 
-@mcp.tool(annotations=ADDITIVE)
+@mcp.tool(annotations=DESTRUCTIVE)
 @keep_operation
 def move_list_item(note_id: str, item_id: str, position: StrictInt) -> dict[str, Any]:
     """Move an item to a zero-based final position (0 is first).
 
     Counts both checked and unchecked items in get_note order. Preserves IDs,
-    text and checked states. Indented checklists are rejected without changes.
+    text and checked states. A move to the current position performs no write.
+    Indented checklists are rejected without changes.
     """
     keep, note, items = _get_flat_list_or_raise(note_id)
-    if type(position) is not int or not 0 <= position < len(items):
-        raise ToolError(f"position must be an integer from 0 to {len(items) - 1}")
     item = next((item for item in items if item.id == item_id), None)
     if item is None:
         raise ToolError(f"List item with ID {item_id} not found")
+    if not 0 <= position < len(items):
+        raise ToolError(f"position must be an integer from 0 to {len(items) - 1}")
     items.remove(item)
     items.insert(position, item)
-    _set_list_order(items)
-    keep.sync()
+    if _set_list_order(note, [item.id for item in items]):
+        keep.sync()
     return serialize_note(note)
 
 
-@mcp.tool(annotations=ADDITIVE)
+@mcp.tool(annotations=DESTRUCTIVE)
 @keep_operation
 def reorder_list_items(note_id: str, item_ids: list[str]) -> dict[str, Any]:
     """Bulk reorder a checklist, supplying every live item ID exactly once, first to last.
 
     Include checked items. Partial orders, duplicate/unknown IDs and indented
     checklists are rejected without changes. Preserves IDs, text and checked
-    states. An empty order is valid only for an empty checklist.
+    states. An empty order is valid only for an empty checklist. An unchanged
+    order performs no write.
     """
     keep, note, items = _get_flat_list_or_raise(note_id)
-    by_id = {item.id: item for item in items}
     if len(item_ids) != len(set(item_ids)):
         raise ToolError("item_ids must not contain duplicate IDs")
-    if set(item_ids) != set(by_id):
+    if set(item_ids) != {item.id for item in items}:
         raise ToolError("item_ids must contain every current checklist item ID exactly once")
-    _set_list_order([by_id[item_id] for item_id in item_ids])
-    keep.sync()
+    if _set_list_order(note, item_ids):
+        keep.sync()
     return serialize_note(note)
 
 
-@mcp.tool()
+@mcp.tool(annotations=DESTRUCTIVE)
 @keep_operation
 def replace_list_items(note_id: str, items: list[ReplacementChecklistItem]) -> dict[str, Any]:
     """Replace all checklist items in input order; [] clears the checklist.
 
     Each item requires text; checked defaults to false. Old items are deleted
     and replacements receive new IDs. Note metadata is preserved. Indented
-    checklists and unknown item fields are rejected. Validates before mutation
+    checklists and unknown item fields are rejected. MCP validates before mutation
     and syncs once after mutation; this is not a server-side atomic transaction.
     """
-    try:
-        validated = _replacement_items.validate_python(items, strict=True)
-    except ValidationError as exc:
-        raise ToolError(f"Invalid replacement items: {exc}") from exc
     keep, note, old_items = _get_flat_list_or_raise(note_id)
     for item in old_items:
         item.delete()
-    for index, item in enumerate(validated):
-        note.add(
-            text=item["text"], checked=item.get("checked", False),
-            sort=(len(validated) - index) * gkeepapi.node.List.SORT_DELTA,
-        )
+    new_items = [note.add(text=item["text"], checked=item.get("checked", False)) for item in items]
+    _set_list_order(note, [item.id for item in new_items])
     keep.sync()
     return serialize_note(note)
 

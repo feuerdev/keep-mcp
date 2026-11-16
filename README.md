@@ -134,8 +134,12 @@ already empty checklist.
 
 All three tools currently require flat checklists: an existing checklist with
 indented items is rejected without changes, so hierarchy cannot be silently lost.
+They are annotated as destructive because ordering overwrites the existing order
+and replacement deletes the old items.
 They use the same keep-mcp label / `UNSAFE_MODE` restriction as other modification
 tools. They refresh through the shared client, then sync once after mutation.
+Moving an item to its current position or supplying the current bulk order leaves
+the items untouched and skips the post-mutation sync.
 This is not a server-side atomic transaction: a network failure can leave the
 remote outcome uncertain. Read the note again before retrying, particularly after
 replacement. Concurrent external edits can also affect the final order.

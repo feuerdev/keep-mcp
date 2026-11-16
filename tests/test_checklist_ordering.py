@@ -53,7 +53,7 @@ def test_bulk_order_survives_serialization_and_preserves_items(keep, checklist):
 
 
 @pytest.mark.parametrize("source,position,expected", [
-    (2, 0, [2, 0, 1]), (0, 2, [1, 2, 0]), (1, 1, [0, 1, 2]), (0, 1, [1, 0, 2]),
+    (2, 0, [2, 0, 1]), (0, 2, [1, 2, 0]), (0, 1, [1, 0, 2]),
 ])
 def test_move_uses_final_zero_based_position(keep, checklist, source, position, expected):
     ids = [i.id for i in checklist.items]
@@ -61,6 +61,25 @@ def test_move_uses_final_zero_based_position(keep, checklist, source, position, 
     assert [i["id"] for i in result["items"]] == [ids[index] for index in expected]
     assert [i.id for i in restored_note(keep, checklist).items] == [ids[index] for index in expected]
     keep.sync.assert_called_once_with()
+
+
+@pytest.mark.parametrize("tool", ["move_list_item", "reorder_list_items"])
+def test_unchanged_order_does_not_dirty_items_or_sync(keep, checklist, tool):
+    # Model a clean tree fetched from Google, including all child timestamps.
+    checklist.save()
+    for item in checklist.items:
+        item.save()
+    before = keep.dump()
+    ids = [item.id for item in checklist.items]
+    if tool == "move_list_item":
+        result = cli.move_list_item(checklist.id, ids[1], 1)
+    else:
+        result = cli.reorder_list_items(checklist.id, ids)
+    assert [item["id"] for item in result["items"]] == ids
+    assert keep.dump() == before
+    assert not checklist.dirty
+    assert not any(item.dirty for item in checklist.items)
+    keep.sync.assert_not_called()
 
 
 @pytest.mark.parametrize("bad_order", ["duplicate", "missing", "unknown", "empty", "foreign", "deleted"])
@@ -85,7 +104,9 @@ def test_bad_bulk_order_leaves_tree_unchanged(keep, checklist, bad_order):
 def test_bad_move_position_leaves_tree_unchanged(keep, checklist, position):
     before = snapshot(checklist)
     with pytest.raises(ToolError, match="position"):
-        cli.move_list_item(checklist.id, checklist.items[0].id, position)
+        anyio.run(cli.mcp.call_tool, "move_list_item", {
+            "note_id": checklist.id, "item_id": checklist.items[0].id, "position": position,
+        })
     assert snapshot(checklist) == before
     keep.sync.assert_not_called()
 
@@ -98,11 +119,20 @@ def test_move_unknown_id_leaves_tree_unchanged(keep, checklist):
     keep.sync.assert_not_called()
 
 
+def test_move_on_empty_list_reports_missing_item(keep):
+    note = keep.createList("Empty")
+    note.labels.add(keep.createLabel("keep-mcp"))
+    with pytest.raises(ToolError, match="List item with ID missing not found"):
+        cli.move_list_item(note.id, "missing", 0)
+    assert note.items == []
+    keep.sync.assert_not_called()
+
+
 def invoke(tool, note):
     if tool == "move_list_item":
-        return cli.move_list_item(note.id, note.items[0].id if hasattr(note, "items") else "missing", 0)
+        return cli.move_list_item(note.id, note.items[0].id if hasattr(note, "items") else "missing", 1)
     if tool == "reorder_list_items":
-        return cli.reorder_list_items(note.id, [i.id for i in note.items] if hasattr(note, "items") else [])
+        return cli.reorder_list_items(note.id, [i.id for i in reversed(note.items)] if hasattr(note, "items") else [])
     return cli.replace_list_items(note.id, [{"text": "New"}])
 
 
@@ -168,9 +198,8 @@ def test_empty_replacement_and_empty_order(keep, checklist):
     keep.sync.assert_called_once_with()
     keep.sync.reset_mock()
     assert cli.reorder_list_items(checklist.id, [])["items"] == []
-    keep.sync.assert_called_once_with()
-    keep.sync.reset_mock()
-    with pytest.raises(ToolError, match="position"):
+    keep.sync.assert_not_called()
+    with pytest.raises(ToolError, match="not found"):
         cli.move_list_item(checklist.id, "missing", 0)
     keep.sync.assert_not_called()
 
@@ -183,11 +212,14 @@ def test_empty_replacement_and_empty_order(keep, checklist):
 def test_replacement_validates_all_items_before_mutation(keep, checklist, invalid):
     before = snapshot(checklist)
     with pytest.raises(ToolError):
-        cli.replace_list_items(checklist.id, [{"text": "Valid"}, invalid])
+        anyio.run(cli.mcp.call_tool, "replace_list_items", {
+            "note_id": checklist.id, "items": [{"text": "Valid"}, invalid],
+        })
     assert snapshot(checklist) == before
     keep.sync.assert_not_called()
     # A later successful mutation must not flush any rejected replacement.
-    cli.move_list_item(checklist.id, checklist.items[0].id, 0)
+    cli.pin_note(checklist.id, True)
+    keep.sync.assert_called_once_with()
     assert [(i.text, i.checked) for i in checklist.items] == [(i[1], i[2]) for i in before]
 
 
@@ -204,9 +236,8 @@ def test_mcp_registration_and_calls(keep, checklist):
         tools = {tool.name: tool for tool in await cli.mcp.list_tools()}
         for name in ("move_list_item", "reorder_list_items", "replace_list_items"):
             assert name in tools
+            assert tools[name].annotations.destructive_hint is True
         assert tools["move_list_item"].input_schema["properties"]["position"]["type"] == "integer"
-        annotations = tools["replace_list_items"].annotations
-        assert annotations is None or annotations.destructive_hint is not False
         ids = [i.id for i in checklist.items]
         await cli.mcp.call_tool("reorder_list_items", {"note_id": checklist.id, "item_ids": ids[::-1]})
         assert [i.id for i in checklist.items] == ids[::-1]
