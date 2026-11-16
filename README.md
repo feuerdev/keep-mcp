@@ -93,6 +93,52 @@ Older instructions may ask for your Google password or an app password and call 
 * `add_list_item`: Add an item to a checklist note
 * `update_list_item`: Update checklist item text and checked state
 * `delete_list_item`: Delete a checklist item
+* `move_list_item`: Move an item to a zero-based final position
+* `reorder_list_items`: Bulk reorder a checklist using all its item IDs
+* `replace_list_items`: Replace the entire checklist, creating new item IDs
+
+#### Checklist ordering and replacement
+
+Get the current item IDs and order with `get_note`. `move_list_item` takes
+`note_id`, `item_id`, and `position`: `0` means first, and the last valid position
+is the item count minus one. The position is the item's final index after moving.
+
+For bulk ordering, call `reorder_list_items` with `note_id` and `item_ids` in the
+desired first-to-last order. Supply **every current item ID exactly once**, including
+checked items. Missing, duplicate, unknown, foreign, or deleted IDs are rejected
+before mutation. Ordering preserves item IDs, text and checked states. Positions
+refer to the combined order returned by `get_note`; Keep may display checked items
+in a separate section according to its settings.
+
+Example tool arguments (substitute IDs returned by `get_note`):
+
+```json
+{"note_id":"NOTE_ID","item_id":"THIRD_ITEM_ID","position":0}
+```
+
+```json
+{"note_id":"NOTE_ID","item_ids":["THIRD_ITEM_ID","FIRST_ITEM_ID","SECOND_ITEM_ID"]}
+```
+
+`replace_list_items` takes `note_id` and an `items` array. Each item requires
+`text`; `checked` is optional and defaults to `false`. Only these two item fields
+are accepted. The full payload is validated before any item is changed. All old
+items are marked for deletion and new items are created in input order with new
+IDs. The note itself, title, labels, collaborators and other note metadata remain.
+Passing `items: []` clears the checklist; an empty bulk order is valid only for an
+already empty checklist.
+
+```json
+{"note_id":"NOTE_ID","items":[{"text":"Milk","checked":false},{"text":"Bread","checked":true}]}
+```
+
+All three tools currently require flat checklists: an existing checklist with
+indented items is rejected without changes, so hierarchy cannot be silently lost.
+They use the same keep-mcp label / `UNSAFE_MODE` restriction as other modification
+tools. They refresh through the shared client, then sync once after mutation.
+This is not a server-side atomic transaction: a network failure can leave the
+remote outcome uncertain. Read the note again before retrying, particularly after
+replacement. Concurrent external edits can also affect the final order.
 
 ### Note state tools
 * `set_note_color`: Set a note color (valid values: DEFAULT, RED, ORANGE, YELLOW, GREEN, TEAL, BLUE, CERULEAN, PURPLE, PINK, BROWN, GRAY)
